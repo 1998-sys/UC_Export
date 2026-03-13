@@ -1,0 +1,362 @@
+
+import os
+import xlwings as xw
+from writers.utils_writer import (faixas_calibradas, calcular_amplitudes, formatar_celula_valor, incerteza_absoluta,
+                                   erro_fiducial_abs, obter_k, incerteza_temperatura, incert_temp_comb, dados_secundários, dados_placa)
+
+def preencher_gas_parameters(wb, dados):
+    amplitudes = calcular_amplitudes(faixas_calibradas(dados))
+    incerteza_abs = incerteza_absoluta(dados, amplitudes)
+    erro_fid = erro_fiducial_abs(dados, amplitudes)
+    k_val = obter_k(dados)
+    incert_transm = incerteza_temperatura(dados.get('temperatura'))
+    incert_termo = incerteza_temperatura(dados.get('termoresistencia'))
+    icert_comb = incert_temp_comb(incert_transm, incert_termo)
+    temp_ref = dados.get('dados_operacao', {}).get('temperatura')
+    pres_ref = dados.get('dados_operacao', {}).get('pressao')
+    print('dados:', dados)
+    
+    ws = wb.sheets["Gas parameters"]
+
+    valor = pres_ref
+    if valor is not None:
+        ws.range("F10").value = valor
+    
+    valor = temp_ref
+    if valor is not None:
+        ws.range("F12").value = valor
+
+    valor = amplitudes.get("dpt_alta")
+    if valor is not None:
+        ws.range("F20").value = valor
+
+    valor = amplitudes.get("dp_media")
+    if valor is not None:
+        ws.range("F22").value = valor
+
+    valor = amplitudes.get("dp_baixa")
+    if valor is not None:
+        ws.range("F24").value = valor
+
+
+    valor = incerteza_abs.get("dpt_alta")
+    if valor is not None:
+        cel = ws.range("E33")
+        cel.value = valor
+    
+    valor = erro_fid.get("dpt_alta")
+    if valor is not None:
+        cel = ws.range("E35")
+        cel.value = valor
+        formatar_celula_valor(cel)
+
+        
+    valor = incerteza_abs.get("dp_media")
+    if valor is not None:
+        cel = ws.range("E53")
+        cel.value = valor
+    
+    valor = erro_fid.get("dp_media")
+    if valor is not None:
+        cel = ws.range("E55")
+        cel.value = valor
+        
+
+    valor = incerteza_abs.get("dp_baixa")
+    if valor is not None:
+        cel = ws.range("E73")
+        cel.value = valor
+        
+
+    valor = erro_fid.get("dp_baixa")
+    if valor is not None:
+        cel = ws.range("E75")
+        cel.value = valor
+    
+    
+    valor = incerteza_abs.get("pressao_estatica")
+    if valor is not None:
+        cel = ws.range("E93")
+        cel.value = valor
+        
+
+    valor = erro_fid.get("pressao_estatica")
+    if valor is not None:
+        cel = ws.range("E95")
+        cel.value = valor
+    
+    valor_k = k_val.get("dpt_alta")
+    if valor_k is not None:
+        cel = ws.range('G33')
+        cel.value = valor_k
+        
+    valor_k = k_val.get("dp_media")
+    if valor_k is not None:
+        cel = ws.range('G53')
+        cel.value = valor_k
+
+    valor_k = k_val.get("dp_baixa")
+    if valor_k is not None:
+        cel = ws.range('G73')
+        cel.value = valor_k
+    
+    valor_k = k_val.get("pressao_estatica")
+    if valor_k is not None:
+        cel = ws.range('G93')
+        cel.value = valor_k
+
+    inc_transm = incert_transm.get("incerteza") if incert_transm else None
+    k_trasm = incert_transm.get("k") if incert_transm else None
+    err_transm = incert_transm.get("erro") if incert_transm else None
+    if inc_transm is not None:
+        cel = ws.range('X116')
+        cel.value = inc_transm
+        cel = ws.range('Y116')
+        cel.value = k_trasm
+        cel = ws.range('Z116')  
+        cel.value = err_transm
+    
+    inc_termo = incert_termo.get("incerteza") if incert_termo else None
+    k_termo = incert_termo.get("k") if incert_termo else None
+    err_termo = incert_termo.get("erro") if incert_termo else None
+    if inc_termo is not None:
+        cel = ws.range('X112')
+        cel.value = inc_termo
+        cel = ws.range('Y112')
+        cel.value = k_termo
+        cel = ws.range('Z112')
+        cel.value = err_termo
+    
+    if icert_comb is not None:
+        cel = ws.range('E113')
+        cel.value = icert_comb.get("incerteza")
+        cel = ws.range('G113')
+        cel.value = icert_comb.get("k")
+        cel = ws.range('E115')
+        cel.value = icert_comb.get("erro")
+    
+    amplitudes = None
+    incerteza_abs = None
+    erro_fid = None
+    k_val = None
+    incert_transm = None
+    incert_termo = None
+    icert_comb = None
+    
+def preencher_meter_run_parameter(wb, dados):
+
+    placa_dados = dados_placa(dados)
+    ws = wb.sheets["Meter run parameters"]
+
+    diametro = placa_dados.get("diametro_orificio", {}).get("valor", None)
+    incert = placa_dados.get("diametro_orificio", {}).get("incerteza", None)
+    k_placa = placa_dados.get("diametro_orificio", {}).get('k', None)
+    coef_placa = placa_dados.get("coef_dilatacao", None)
+
+    if diametro is not None:
+        cel = ws.range("F42")
+        cel.value = diametro
+    
+    if incert is not None:
+        cel = ws.range("E49")
+        cel.value = incert
+
+    if k_placa is not None:
+        cel = ws.range("I49")
+        cel.value = k_placa
+
+    if coef_placa is not None:
+        cel = ws.range("N44")
+        cel.value = coef_placa    
+    
+    placa_dados= None
+    diametro = None
+    incert = None
+    k_placa = None
+    coef_placa = None
+     
+def preencher_cromatografia(wb, dados):
+    print("Entrou na função completa de cromatografia")
+
+    cromatografia = dados.get("cromatografia")
+
+    if not cromatografia:
+        print("Nenhum dado de cromatografia encontrado. Mantendo dados anteriores.")
+        return
+
+    ws = wb.sheets["Chromatography"]
+
+    ws.range("B2:E200").clear_contents()
+
+    linha = 2
+
+    componentes = [
+        c for c in cromatografia.get("componentes", [])
+        if (c.get("rotulo") or "").upper() != "H2S"
+        and "HIDROG" not in (c.get("nome") or "").upper()
+    ]
+
+    
+    if not componentes:
+        print("Cromatografia existe, mas não possui componentes. Mantendo dados anteriores.")
+        return
+
+    
+    for comp in componentes:
+        rotulo = comp.get("rotulo")
+        nome = comp.get("nome")
+
+        ws.range(f"B{linha}").value = rotulo
+        ws.range(f"C{linha}").value = nome
+
+        if comp.get("molpct") is not None:
+            cel = ws.range(f"D{linha}")
+            cel.value = float(comp.get("molpct"))
+            formatar_celula_valor(cel)
+
+        if comp.get("incerteza") is not None:
+            cel = ws.range(f"E{linha}")
+            cel.value = float(comp.get("incerteza"))
+            formatar_celula_valor(cel)
+
+        linha += 1
+
+    linha += 1
+
+    
+    ws.range(f"B{linha}").value = "Propriedades do Gas - Condição Padrão (1)"
+    ws.range(f"B{linha}").api.Font.Bold = True
+    ws.range(f"C{linha}").value = "Referência"
+
+    linha += 1
+
+    propriedades_padrao = cromatografia.get("propriedades_condicao_padrao", [])
+
+    for prop in propriedades_padrao:
+        ws.range(f"B{linha}").value = prop.get("nome")
+        ws.range(f"C{linha}").value = prop.get("referencia")
+
+        if prop.get("valor") is not None:
+            cel = ws.range(f"D{linha}")
+            cel.value = float(prop.get("valor"))
+            formatar_celula_valor(cel)
+
+        if prop.get("incerteza") is not None:
+            cel = ws.range(f"E{linha}")
+            cel.value = float(prop.get("incerteza"))
+            formatar_celula_valor(cel)
+
+        linha += 1
+
+    linha += 1
+
+   
+    ws.range(f"B{linha}").value = "Propriedades do Gas - Condições de Amostragem"
+    ws.range(f"B{linha}").api.Font.Bold = True
+    ws.range(f"C{linha}").value = "Referência"
+
+    linha += 1
+
+    propriedades_amostragem = cromatografia.get(
+        "propriedades_condicoes_amostragem", []
+    )
+
+    for prop in propriedades_amostragem:
+        ws.range(f"B{linha}").value = prop.get("nome")
+        ws.range(f"C{linha}").value = prop.get("referencia")
+
+        if prop.get("valor") is not None:
+            cel = ws.range(f"D{linha}")
+            cel.value = float(prop.get("valor"))
+            formatar_celula_valor(cel)
+
+        if prop.get("incerteza") is not None:
+            cel = ws.range(f"E{linha}")
+            cel.value = float(prop.get("incerteza"))
+            formatar_celula_valor(cel)
+
+        linha += 1
+    
+    cromatografia = None
+
+def preencher_equipament_list(wb, dados):
+
+    sec_dados = dados_secundários(dados)
+    placa_dados = dados_placa(dados)
+    
+
+
+    ws = wb.sheets["Equipment List"]
+
+    linhas = {
+        "temperatura": 16,
+        "termoresistencia": 17,
+        "pressao_estatica": 18,
+        "dpt_alta": 19,
+    }
+
+    for instrumento, linha in linhas.items():
+
+        info = sec_dados.get(instrumento, {})
+
+        tag = info.get("tag")
+        ns = info.get("numero_serie")
+        cert = info.get("certificado")
+
+        if tag is not None:
+            ws.range(f"D{linha}").value = tag
+        if ns is not None:
+            ws.range(f"E{linha}").value = ns
+        if cert is not None:
+            ws.range(f"F{linha}").value = cert
+
+    print(placa_dados)
+    tag_placa = placa_dados.get("tag")
+    ns_placa = placa_dados.get("numero_serie")
+    cert_placa = placa_dados.get("certificado")
+
+    if tag_placa is not None:
+        ws.range("D15").value = tag_placa
+
+    if ns_placa is not None:
+        ws.range("E15").value = ns_placa
+
+    if cert_placa is not None:
+        ws.range("F15").value = cert_placa
+
+    sec_dados = None
+    placa_dados = None
+
+def preencher_report(wb, dados):
+    pass
+
+
+def processar_planilha(caminho_excel, dados):
+
+    app = xw.App(visible=False)
+    app.display_alerts = False
+    app.screen_updating = False
+
+    try:
+
+        wb = app.books.open(
+            caminho_excel,
+            update_links=False,
+            read_only=False,
+            ignore_read_only_recommended=True
+        )
+
+        preencher_gas_parameters(wb, dados)
+        preencher_meter_run_parameter(wb, dados)
+        preencher_cromatografia(wb, dados)
+        preencher_equipament_list(wb, dados)
+
+        app.calculate()
+
+        wb.save()
+
+        wb.close()
+
+    finally:
+
+        app.quit()
