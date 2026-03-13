@@ -37,8 +37,8 @@ Software desenvolvido para **Exportar informações de XML** de **Primários, Se
 
 ```text
 /CI_Export_app
-│── ci_export_app.exe               → Executável
-│── interface.xlsx           → Interface do software
+│── ci_export_app.exe        → Executável
+│── interface                → Interface do software
 │── loader                   → Módulos de leitura do XML
 ├── logo/                    → Imagens da interface
 ├── services/                → Regras de validação + módulos de identificação planilha e execução de fluxo
