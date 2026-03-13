@@ -6,6 +6,7 @@ import sys
 
 from services.ci_service import executar_fluxo, identificar_tipo_ci
 from services.validacoes import validar_ordem_dpts
+from writers.utils_writer import registrar_resposta
 
 from loaders.loader_xml import (
     dados_secundarios,
@@ -63,21 +64,24 @@ def selecionar_ci():
 
 
 def perguntar_xml(pergunta, chave, tipo_loader="certificado"):
-
+  
     resposta = messagebox.askyesno(
         "Inserir Dados",
         f"Deseja inserir dados de {pergunta}?"
     )
 
     if not resposta:
+        registrar_resposta(chave, False)
         return
-
+    
     caminho_xml = filedialog.askopenfilename(
         title=f"Selecionar XML - {pergunta}",
-        filetypes=[("XML", "*.xml")]
+        filetypes=[("Arquivos XML", "*.xml")]
     )
 
+
     if not caminho_xml:
+        registrar_resposta(chave, False)
         return
 
     try:
@@ -92,6 +96,7 @@ def perguntar_xml(pergunta, chave, tipo_loader="certificado"):
             dados = dados_cromatografia(caminho_xml)
 
         dados_coletados[chave] = dados
+        registrar_resposta(chave, True)
 
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao ler XML:\n{e}")
@@ -243,7 +248,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title('CI Processor')
+        self.title('UC Export')
         self.geometry("420x550")
         self.resizable(False, False)
         self.configure(fg_color=ODS_BG)
@@ -280,7 +285,7 @@ class App(ctk.CTk):
 
         ctk.CTkLabel(
             container,
-            text="CI IMPORTER",
+            text="UC EXPORT",
             text_color="white",
             font=ctk.CTkFont(family=FONT_FAMILY, size=26, weight="bold")
         ).pack()

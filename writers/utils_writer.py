@@ -85,8 +85,6 @@ def incerteza_absoluta(dados, amplitudes):
 
     return resultado
 
-
-
 def erro_fiducial_abs(dados, amplitudes):
     resultado = {}
     for nome, amplitude in amplitudes.items():
@@ -117,8 +115,6 @@ def erro_fiducial_abs(dados, amplitudes):
             resultado[nome] = None
     
     return resultado
-
-
 
 def obter_k(dados):
     resultado = {}
@@ -171,7 +167,6 @@ def obter_k(dados):
 
     return resultado
 
-
 def incerteza_temperatura(dados):
     if not dados:
         return None
@@ -222,8 +217,6 @@ def incerteza_temperatura(dados):
 
     return melhor_ponto
 
-
-
 def incert_temp_comb(incert_transm, incert_termo):
 
     if not incert_termo:
@@ -247,7 +240,6 @@ def incert_temp_comb(incert_transm, incert_termo):
         "erro": round(erro_combinado, 6),
         "k": 2
     }
-
 
 def dados_secundários(dados):
 
@@ -293,7 +285,6 @@ def dados_secundários(dados):
 
     return resultado
 
-
 def dados_placa(dados):
 
     placa = dados.get("placa")
@@ -332,3 +323,12 @@ def dados_placa(dados):
             "aprovado": diametro.get("aprovado")
         }
     }
+
+respostas_xml = {}
+
+def registrar_resposta(chave, valor):
+    respostas_xml[chave] = valor
+
+def obter_respostas():
+    return respostas_xml
+

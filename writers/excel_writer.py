@@ -2,7 +2,7 @@
 import os
 import xlwings as xw
 from writers.utils_writer import (faixas_calibradas, calcular_amplitudes, formatar_celula_valor, incerteza_absoluta,
-                                   erro_fiducial_abs, obter_k, incerteza_temperatura, incert_temp_comb, dados_secundários, dados_placa)
+                                   erro_fiducial_abs, obter_k, incerteza_temperatura, incert_temp_comb, dados_secundários, dados_placa , obter_respostas)
 
 def preencher_gas_parameters(wb, dados):
     amplitudes = calcular_amplitudes(faixas_calibradas(dados))
@@ -328,8 +328,47 @@ def preencher_equipament_list(wb, dados):
     placa_dados = None
 
 def preencher_report(wb, dados):
-    pass
 
+    respostas = obter_respostas()
+    ws = wb.sheets["Report"]
+
+    placa = respostas.get("placa", False)
+    cromatografia = respostas.get("cromatografia", False)
+
+    secundarios = any([
+        respostas.get("dpt_alta"),
+        respostas.get("dp_media"),
+        respostas.get("dp_baixa"),
+        respostas.get("pressao_estatica"),
+        respostas.get("temperatura"),
+        respostas.get("termoresistencia")
+    ])
+
+    if placa and cromatografia and secundarios:
+        texto = "Troca de placa de orifício, Atualização de cromatografia e calibração de secundários"
+
+    elif placa and cromatografia:
+        texto = "Troca de placa de orifício + Atualização de cromatografia"
+
+    elif placa and secundarios:
+        texto = "Troca de placa de orifício + calibração de secundários"
+
+    elif placa:
+        texto = "Troca de placa de orifício"
+
+    elif cromatografia:
+        texto = "Atualização de cromatografia"
+
+    elif secundarios:
+        texto = "Calibração de instrumentos secundários"
+
+    else:
+        texto = ""
+
+    ws.range("C13").clear_contents()
+    ws.range("C13").value = texto
+
+        
 
 def processar_planilha(caminho_excel, dados):
 
@@ -350,6 +389,7 @@ def processar_planilha(caminho_excel, dados):
         preencher_meter_run_parameter(wb, dados)
         preencher_cromatografia(wb, dados)
         preencher_equipament_list(wb, dados)
+        preencher_report(wb, dados)
 
         app.calculate()
 
