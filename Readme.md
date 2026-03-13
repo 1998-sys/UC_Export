@@ -51,11 +51,11 @@ Software desenvolvido para **Exportar informações de XML** de **Primários, Se
 
 ![Tela inicial do ACs Generator](logo/CI%20Export.png)
 
-1-Abra o software (executável).
+1- Abra o software (executável).
 
-2-Clique em Selecionar CI (selecione o arquivo em excel).
+2- Clique em Selecionar CI (selecione o arquivo em excel).
 
-3-O programa:
+3- O programa:
 
 - Abre a planilha
 - Pergunta sobre qual tipo de XML quer importar 
