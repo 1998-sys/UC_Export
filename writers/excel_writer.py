@@ -368,7 +368,7 @@ def preencher_report(wb, dados):
     ws.range("C13").clear_contents()
     ws.range("C13").value = texto
 
-        
+    
 
 def processar_planilha_gas(caminho_excel, dados):
 

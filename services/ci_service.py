@@ -1,4 +1,5 @@
 from writers.excel_writer import processar_planilha_gas
+from writers.excel_writer_oleo import processar_planilha_oleo
 from openpyxl import load_workbook
 
 def executar_fluxo(ci_path: str, dados: dict, tipo: str):
@@ -11,7 +12,10 @@ def executar_fluxo(ci_path: str, dados: dict, tipo: str):
         )
 
     elif tipo == "oleo":
-        print("Processamento de óleo ainda não implementado")
+        processar_planilha_oleo(
+            caminho_excel=ci_path,
+            dados=dados
+        )
 
     else:
         raise ValueError("Tipo de CI não suportado")

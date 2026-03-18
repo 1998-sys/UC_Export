@@ -178,6 +178,87 @@ def inserir_dados_operacao():
     janela.wait_window()
 
 
+def inserir_dados_op_oleo():
+
+    janela = ctk.CTkToplevel()
+    janela.title("Dados Operação Óleo")
+    janela.geometry("350x500")
+    janela.grab_set()
+
+    frame = ctk.CTkFrame(janela, fg_color=ODS_FRAME_LIGHT)
+    frame.pack(padx=20, pady=20, fill="both", expand=True)
+
+    titulo = ctk.CTkLabel(
+        frame,
+        text="Inserir Dados de Fluxo de Óleo",
+        font=(FONT_FAMILY, 16, "bold"),
+        text_color=ODS_TEXT
+    )
+    titulo.pack(pady=(10, 20))
+
+    # Densidade
+    ctk.CTkLabel(frame, text="Densidade:", font=(FONT_FAMILY, 12)).pack()
+    entry_densidade = ctk.CTkEntry(frame)
+    entry_densidade.pack(pady=5)
+
+    # Temperatura
+    ctk.CTkLabel(frame, text="Temperatura:", font=(FONT_FAMILY, 12)).pack(pady=(10, 0))
+    entry_temp = ctk.CTkEntry(frame)
+    entry_temp.pack(pady=5)
+
+    # Pressão
+    ctk.CTkLabel(frame, text="Pressão:", font=(FONT_FAMILY, 12)).pack(pady=(10, 0))
+    entry_pressao = ctk.CTkEntry(frame)
+    entry_pressao.pack(pady=5)
+
+    # BSW Máximo
+    ctk.CTkLabel(frame, text="BSW Máximo (%):", font=(FONT_FAMILY, 12)).pack(pady=(10, 0))
+    entry_bsw = ctk.CTkEntry(frame)
+    entry_bsw.pack(pady=5)
+
+    # Incerteza BSW
+    ctk.CTkLabel(frame, text="Incerteza BSW (%):", font=(FONT_FAMILY, 12)).pack(pady=(10, 0))
+    entry_incert_bsw = ctk.CTkEntry(frame)
+    entry_incert_bsw.pack(pady=5)
+
+    def salvar():
+
+        densidade = entry_densidade.get()
+        temperatura = entry_temp.get()
+        pressao = entry_pressao.get()
+        bsw = entry_bsw.get()
+        inc_bsw = entry_incert_bsw.get()
+
+        if not all([densidade, temperatura, pressao, bsw, inc_bsw]):
+            messagebox.showwarning(
+                "Atenção",
+                "Preencha todos os campos."
+            )
+            return
+
+        dados_coletados["dados_fluxo_oleo"] = {
+            "densidade": densidade,
+            "temperatura": temperatura,
+            "pressao": pressao,
+            "bsw_max": bsw,
+            "incerteza_bsw": inc_bsw
+        }
+
+        janela.destroy()
+
+    botao_salvar = ctk.CTkButton(
+        frame,
+        text="Salvar",
+        command=salvar,
+        fg_color=ODS_RED,
+        hover_color=ODS_RED_HOVER
+    )
+
+    botao_salvar.pack(pady=15)
+
+    janela.wait_window()
+
+
 def iniciar_fluxo():
 
     tipo = dados_coletados.get("tipo_ci")
