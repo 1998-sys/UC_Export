@@ -273,6 +273,19 @@ def iniciar_fluxo():
         messagebox.showerror("Erro", "Tipo de CI inválido.")
         return
 
+    
+    dados_importados = {
+        k: v for k, v in dados_coletados.items()
+        if k not in ("ci", "tipo_ci")
+    }
+
+    if not dados_importados:
+        messagebox.showwarning(
+            "Atenção",
+            "Nenhum dado foi importado. Operação cancelada."
+        )
+        return
+
     finalizar()
 
 
