@@ -54,7 +54,6 @@ def formatar_celula_valor(cell):
     cell.api.Font.Size = 10
     cell.color = (255, 204, 153) 
 
-
 def incerteza_absoluta(dados, amplitudes):
     resultado = {}
     for nome, amplitude in amplitudes.items():

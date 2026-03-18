@@ -4,10 +4,10 @@ from PIL import Image
 import os
 import sys
 
-from services.ci_service import executar_fluxo, identificar_tipo_ci
+from services.ci_service import identificar_tipo_ci, executar_fluxo
 from services.validacoes import validar_ordem_dpts
 from writers.utils_writer import registrar_resposta
-
+from services.fluxos import fluxo_gas, fluxo_oleo
 from loaders.loader_xml import (
     dados_secundarios,
     dados_placa,
@@ -52,14 +52,28 @@ def selecionar_ci():
 
     tipo = identificar_tipo_ci(caminho)
 
-    if tipo != "gas":
+    if tipo == "nao_suportado":
         messagebox.showwarning(
             "CI não suportado",
-            "A planilha selecionada não é um CI de gás."
+            "A planilha selecionada não é suportada."
         )
         return
 
+    if tipo == "gas":
+        messagebox.showinfo(
+            "Tipo de CI",
+            "Planilha de gás selecionada."
+        )
+
+    elif tipo == "oleo":
+        messagebox.showinfo(
+            "Tipo de CI",
+            "Planilha de óleo selecionada."
+        )
+
+    dados_coletados["tipo_ci"] = tipo
     dados_coletados["ci"] = caminho
+
     iniciar_fluxo()
 
 
@@ -166,37 +180,16 @@ def inserir_dados_operacao():
 
 def iniciar_fluxo():
 
-    perguntar_xml("Placa de Orifício", "placa", "placa")
-    perguntar_xml("Cromatografia", "cromatografia", "cromatografia")
-    perguntar_xml("Transmissor de Pressão Diferencial Alta", "dpt_alta")
-    perguntar_xml("Transmissor de Pressão Diferencial Média", "dp_media")
-    perguntar_xml("Transmissor de Pressão Diferencial Baixa", "dp_baixa")
-    perguntar_xml("Pressão Estática", "pressao_estatica")
-    perguntar_xml("Transmissor de Temperatura", "temperatura")
-    perguntar_xml("Termorresistência", "termoresistencia")
+    tipo = dados_coletados.get("tipo_ci")
+    
+    if tipo == "gas":
+        fluxo_gas(perguntar_xml, inserir_dados_operacao)
 
-    resposta = messagebox.askyesno(
-        "Dados de Operação",
-        "Deseja inserir dados de operação?"
-    )
+    elif tipo == "oleo":
+        fluxo_oleo(perguntar_xml, inserir_dados_operacao)
 
-    if resposta:
-        inserir_dados_operacao()
-
-    existe_dado = any(
-        valor not in (None, "", {})
-        for chave, valor in dados_coletados.items()
-        if chave != "ci"
-    )
-
-    if not existe_dado:
-
-        messagebox.showinfo(
-            "Nenhum dado encontrado",
-            "Nenhum XML foi selecionado.\n\n"
-            "Não há dados para importar na planilha."
-        )
-
+    else:
+        messagebox.showerror("Erro", "Tipo de CI inválido.")
         return
 
     finalizar()
@@ -205,6 +198,8 @@ def iniciar_fluxo():
 def finalizar():
 
     caminho_ci = dados_coletados.get("ci")
+    tipo = dados_coletados.get("tipo_ci")
+    print(dados_coletados)
 
     if not caminho_ci:
         messagebox.showerror("Erro", "Nenhuma planilha CI foi selecionada.")
@@ -214,22 +209,38 @@ def finalizar():
 
         dados_para_envio = {
             k: v for k, v in dados_coletados.items()
-            if k != "ci"
+            if k not in ("ci", "tipo_ci")
         }
 
-        valido, mensagem = validar_ordem_dpts(dados_para_envio)
+        if tipo == "gas":
 
-        if not valido:
-            messagebox.showwarning(
-                "Atenção - Ordem dos DPTs",
-                mensagem
+            valido, mensagem = validar_ordem_dpts(dados_para_envio)
+
+            if not valido:
+                messagebox.showwarning(
+                    "Atenção - Ordem dos DPTs",
+                    mensagem
+                )
+                return
+            executar_fluxo(ci_path=caminho_ci,dados=dados_para_envio,tipo=tipo)
+        
+        elif tipo == "oleo":
+        
+                messagebox.showwarning(
+                    "Atenção",
+                    "fluxo para óleo rodando."
+                )
+                executar_fluxo(
+                ci_path=caminho_ci,
+                dados=dados_para_envio,
+                tipo=tipo
             )
-            return
 
-        executar_fluxo(
-            ci_path=caminho_ci,
-            dados=dados_para_envio
-        )
+        
+
+        else:
+            messagebox.showerror("Erro", "Tipo de CI inválido.")
+            return
 
         messagebox.showinfo(
             "Concluído",

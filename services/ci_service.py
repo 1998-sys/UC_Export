@@ -1,11 +1,23 @@
-from writers.excel_writer import processar_planilha
+from writers.excel_writer import processar_planilha_gas
 from openpyxl import load_workbook
 
-def executar_fluxo(ci_path: str, dados: dict):
-    processar_planilha(
-        caminho_excel=ci_path,
-        dados=dados
-    )
+def executar_fluxo(ci_path: str, dados: dict, tipo: str):
+
+    if tipo == "gas":
+
+        processar_planilha_gas(
+            caminho_excel=ci_path,
+            dados=dados
+        )
+
+    elif tipo == "oleo":
+
+        # 🔥 quando criar:
+        # processar_planilha_oleo(...)
+        print("Processamento de óleo ainda não implementado")
+
+    else:
+        raise ValueError("Tipo de CI não suportado")
 
 
 
@@ -24,7 +36,15 @@ def identificar_tipo_ci(caminho_excel):
         "Coef Disc & Expansao"
     }
 
+    abas_oleo = {
+        "Report",
+        "Meter run parameters",
+        "Gráfico - Variação Linear"
+    }
+
     if abas_gas.issubset(abas):
         return "gas"
+    elif abas_oleo.issubset(abas):
+        return "oleo"
 
     return "nao_suportado"

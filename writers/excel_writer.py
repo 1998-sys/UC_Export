@@ -370,7 +370,7 @@ def preencher_report(wb, dados):
 
         
 
-def processar_planilha(caminho_excel, dados):
+def processar_planilha_gas(caminho_excel, dados):
 
     app = xw.App(visible=False)
     app.display_alerts = False
