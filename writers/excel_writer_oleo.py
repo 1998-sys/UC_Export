@@ -1,9 +1,8 @@
 
 import os
 import xlwings as xw
-from writers.util_writer_oleo import incerteza_temp_oleo, incerteza_percentual, erro_fiducial
+from writers.util_writer_oleo import incerteza_temp_oleo, incerteza_percentual, erro_fiducial, formatar_percentual
 from writers.utils_writer import faixas_calibradas, calcular_amplitudes
-
 
 
 def preencher_meter_run_param(wb ,dados):
@@ -12,10 +11,12 @@ def preencher_meter_run_param(wb ,dados):
     incert_perc_pressao = incerteza_percentual(dados, {"pressao_estatica": None})
     erro_fid = erro_fiducial(dados, {"pressao_estatica": None})
     amplitudes = calcular_amplitudes(faixas_calibradas(dados))
+    dados_op = dados.get("dados_fluxo_oleo", {})
     print(f"Incerteza calculada: {incert_transm}")
     print(f"Incerteza calculada: {incert_termo}")
     print(f"Incerteza percentual: {incert_perc_pressao}")
     print(f"Erro fiducial: {erro_fid}")
+    print(f"Dados de operação: {dados_op}")
 
     ws = wb.sheets["Meter run parameters"]
 
@@ -44,8 +45,29 @@ def preencher_meter_run_param(wb ,dados):
     erro_fidu = erro_fid.get("pressao_estatica") if erro_fid else None
     if erro_fiducial is not None:
         ws.range("E170").value = f"={amplitude}*{erro_fidu}%"
-        
-       
+    
+
+    densidade_ref = dados_op.get('densidade') if dados_op else None
+    if densidade_ref is not None:
+        ws.range("F64").value = densidade_ref
+
+    temp_ref = dados_op.get('temperatura') if dados_op else None
+    if temp_ref is not None:
+        ws.range("F66").value = temp_ref    
+
+    pressao_ref = dados_op.get('pressao') if dados_op else None
+    if pressao_ref is not None:
+        ws.range("F130").value = pressao_ref
+
+    bsw_max = dados_op.get('bsw_max') if dados_op else None
+    bsw_max = formatar_percentual(bsw_max)
+    if bsw_max is not None:
+        ws.range("F374").value = bsw_max
+    
+    incert_bsw = dados_op.get('incerteza_bsw') if dados_op else None
+    incert_bsw = formatar_percentual(incert_bsw)
+    if incert_bsw is not None:
+        ws.range("E379").value = incert_bsw
 
 
 def processar_planilha_oleo(caminho_excel, dados):

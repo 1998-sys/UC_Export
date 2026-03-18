@@ -15,13 +15,13 @@ def fluxo_gas(perguntar_xml, inserir_dados_operacao):
     perguntar_dados_operacao(inserir_dados_operacao)
 
 
-def fluxo_oleo(perguntar_xml, inserir_dados_operacao):
+def fluxo_oleo(perguntar_xml, inserir_dados_operacao_oleo):
 
     perguntar_xml("Pressão Estática", "pressao_estatica")
     perguntar_xml("Transmissor de Temperatura", "temperatura")
     perguntar_xml("Termorresistência", "termoresistencia")
 
-    perguntar_dados_operacao(inserir_dados_operacao)
+    perguntar_dados_operacao(inserir_dados_operacao_oleo)
 
 
 def perguntar_dados_operacao(inserir_dados_operacao):

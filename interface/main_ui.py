@@ -182,7 +182,7 @@ def inserir_dados_op_oleo():
 
     janela = ctk.CTkToplevel()
     janela.title("Dados Operação Óleo")
-    janela.geometry("350x500")
+    janela.geometry("350x550")
     janela.grab_set()
 
     frame = ctk.CTkFrame(janela, fg_color=ODS_FRAME_LIGHT)
@@ -267,7 +267,7 @@ def iniciar_fluxo():
         fluxo_gas(perguntar_xml, inserir_dados_operacao)
 
     elif tipo == "oleo":
-        fluxo_oleo(perguntar_xml, inserir_dados_operacao)
+        fluxo_oleo(perguntar_xml, inserir_dados_op_oleo)
 
     else:
         messagebox.showerror("Erro", "Tipo de CI inválido.")

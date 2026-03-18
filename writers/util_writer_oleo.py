@@ -99,3 +99,19 @@ def erro_fiducial(dados, amplitudes):
             resultado[nome] = None
 
     return resultado
+
+
+
+def formatar_percentual(valor):
+    if valor is None:
+        return None
+
+    valor = str(valor).strip()
+
+    if valor == "":
+        return None
+
+    if "%" in valor:
+        return valor
+
+    return f"{valor}%"
