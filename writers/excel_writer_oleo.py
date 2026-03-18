@@ -2,7 +2,7 @@
 import os
 import xlwings as xw
 from writers.util_writer_oleo import incerteza_temp_oleo, incerteza_percentual, erro_fiducial, formatar_percentual
-from writers.utils_writer import faixas_calibradas, calcular_amplitudes
+from writers.utils_writer import faixas_calibradas, calcular_amplitudes, dados_secundários
 
 
 def preencher_meter_run_param(wb ,dados):
@@ -70,6 +70,45 @@ def preencher_meter_run_param(wb ,dados):
         ws.range("E379").value = incert_bsw
 
 
+def preencher_equipament_list(wb, dados):
+    sec_dados = dados_secundários(dados)
+    print(f"Dados secundários: {sec_dados}")
+
+    ws = wb.sheets["Equipment list"]
+   
+    linhas = {
+        "temperatura": 17,
+        "termoresistencia": 18,
+        "pressao_estatica": 16,
+    }
+
+    for instrumento, linha in linhas.items():
+
+        info = sec_dados.get(instrumento, {})
+
+        tag = info.get("tag")
+        ns = info.get("numero_serie")
+        cert = info.get("certificado")
+
+        # 🔹 TAG + NS na mesma célula (coluna D)
+        if tag or ns:
+
+            if tag and ns:
+                texto = f"TAG: {tag}\nNS: {ns}"
+            elif tag:
+                texto = f"TAG: {tag}"
+            else:
+                texto = f"NS: {ns}"
+
+            celula = ws.range(f"D{linha}")
+            celula.value = texto
+            celula.api.WrapText = True  # 🔥 essencial pro \n funcionar
+
+        # 🔹 Certificado na coluna F
+        if cert is not None:
+            ws.range(f"F{linha}").value = cert
+
+
 def processar_planilha_oleo(caminho_excel, dados):
 
     app = xw.App(visible=False)
@@ -86,6 +125,7 @@ def processar_planilha_oleo(caminho_excel, dados):
         )
 
         preencher_meter_run_param(wb, dados)
+        preencher_equipament_list(wb, dados)
     
 
         app.calculate()
