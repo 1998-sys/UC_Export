@@ -11,9 +11,6 @@ def executar_fluxo(ci_path: str, dados: dict, tipo: str):
         )
 
     elif tipo == "oleo":
-
-        # 🔥 quando criar:
-        # processar_planilha_oleo(...)
         print("Processamento de óleo ainda não implementado")
 
     else:
