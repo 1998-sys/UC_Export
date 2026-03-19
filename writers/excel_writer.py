@@ -14,8 +14,8 @@ def preencher_gas_parameters(wb, dados):
     icert_comb = incert_temp_comb(incert_transm, incert_termo)
     temp_ref = dados.get('dados_operacao', {}).get('temperatura')
     pres_ref = dados.get('dados_operacao', {}).get('pressao')
-    print('dados:', dados)
-    
+    print('incerteza_comb', icert_comb)
+
     ws = wb.sheets["Gas parameters"]
 
     valor = pres_ref
@@ -43,47 +43,54 @@ def preencher_gas_parameters(wb, dados):
     if valor is not None:
         cel = ws.range("E33")
         cel.value = valor
+        cel.api.Locked = True
     
     valor = erro_fid.get("dpt_alta")
     if valor is not None:
         cel = ws.range("E35")
         cel.value = valor
-        formatar_celula_valor(cel)
+        cel.api.Locked = True
 
         
     valor = incerteza_abs.get("dp_media")
     if valor is not None:
         cel = ws.range("E53")
         cel.value = valor
+        cel.api.Locked = True
     
     valor = erro_fid.get("dp_media")
     if valor is not None:
         cel = ws.range("E55")
         cel.value = valor
+        cel.api.Locked = True
         
 
     valor = incerteza_abs.get("dp_baixa")
     if valor is not None:
         cel = ws.range("E73")
         cel.value = valor
+        cel.api.Locked = True
         
 
     valor = erro_fid.get("dp_baixa")
     if valor is not None:
         cel = ws.range("E75")
         cel.value = valor
+        cel.api.Locked = True
     
     
     valor = incerteza_abs.get("pressao_estatica")
     if valor is not None:
         cel = ws.range("E93")
         cel.value = valor
+        cel.api.Locked = True
         
 
     valor = erro_fid.get("pressao_estatica")
     if valor is not None:
         cel = ws.range("E95")
         cel.value = valor
+        cel.api.Locked = True
     
     valor_k = k_val.get("dpt_alta")
     if valor_k is not None:
@@ -130,10 +137,12 @@ def preencher_gas_parameters(wb, dados):
     if icert_comb is not None:
         cel = ws.range('E113')
         cel.value = icert_comb.get("incerteza")
+        cel.api.Locked = True
         cel = ws.range('G113')
         cel.value = icert_comb.get("k")
         cel = ws.range('E115')
         cel.value = icert_comb.get("erro")
+        cel.api.Locked = True
     
     amplitudes = None
     incerteza_abs = None
@@ -367,8 +376,6 @@ def preencher_report(wb, dados):
 
     ws.range("C13").clear_contents()
     ws.range("C13").value = texto
-
-    
 
 def processar_planilha_gas(caminho_excel, dados):
 

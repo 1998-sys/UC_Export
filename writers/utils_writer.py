@@ -31,7 +31,6 @@ def faixas_calibradas(dados):
         }
     return resultado
 
-
 def calcular_amplitudes(faixas):
     resultado = {}
 
@@ -76,8 +75,8 @@ def incerteza_absoluta(dados, amplitudes):
                 resultado[nome] = None
                 continue
             incerteza_percentual = float(incerteza_percentual)
-            incerteza_absoluta = (amplitude * incerteza_percentual)/100
-            resultado[nome] = round(incerteza_absoluta, 6)
+            formula = f"={amplitude}*{incerteza_percentual}%"
+            resultado[nome] = formula
 
         except (ValueError, TypeError):
             resultado[nome] = None
@@ -107,8 +106,9 @@ def erro_fiducial_abs(dados, amplitudes):
                 continue
 
             erro_fiducial_percentual = float(erro_fiducial_percentual)
-            erro_fiducial_absoluto = (amplitude * erro_fiducial_percentual)/100
-            resultado[nome] = round(erro_fiducial_absoluto, 6)
+            formula = f"={amplitude}*{erro_fiducial_percentual}%"
+
+            resultado[nome] = formula
 
         except (ValueError, TypeError):
             resultado[nome] = None
@@ -224,21 +224,27 @@ def incert_temp_comb(incert_transm, incert_termo):
     if not incert_transm:
         return incert_termo
 
-    u_transm = float(incert_transm.get("incerteza", 0))
-    u_termo = float(incert_termo.get("incerteza", 0))
+    try:
+        u_transm = incert_transm.get("incerteza")
+        u_termo = incert_termo.get("incerteza")
 
-    u_combinada = math.sqrt(u_transm**2 + u_termo**2)
+        erro_transm = incert_transm.get("erro")
+        erro_termo = incert_termo.get("erro")
 
-    erro_transm = float(incert_transm.get("erro"))
-    erro_termo = float(incert_termo.get("erro"))
+        if None in (u_transm, u_termo, erro_transm, erro_termo):
+            return None
 
-    erro_combinado = math.sqrt(erro_transm**2 + erro_termo**2)
+        formula_incerteza = f"=SQRT(({u_transm})^2 + ({u_termo})^2)"
+        formula_erro = f"=SQRT(({erro_transm})^2 + ({erro_termo})^2)"
 
-    return {
-        "incerteza": round(u_combinada, 6),
-        "erro": round(erro_combinado, 6),
-        "k": 2
-    }
+        return {
+            "incerteza": formula_incerteza,
+            "erro": formula_erro,
+            "k": 2
+        }
+
+    except (ValueError, TypeError):
+        return None
 
 def dados_secundários(dados):
 
