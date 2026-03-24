@@ -1,7 +1,9 @@
 
 import os
 import xlwings as xw
-from writers.util_writer_oleo import incerteza_temp_oleo, incerteza_percentual, erro_fiducial, formatar_percentual
+from writers.util_writer_oleo import (incerteza_temp_oleo, incerteza_percentual, erro_fiducial, formatar_percentual, 
+encontrar_celula_resolucao, encontrar_celula_erro_fiducial, encontrar_celula_incerteza_pressao, encontrar_celula_erro_fiducial_pressao,
+encontrar_celula_bsw_maximo, encontrar_celula_incerteza_bsw, encontrar_celula_pressao_op, encontrar_celula_densidade_op, encontrar_celula_temp_op)
 from writers.utils_writer import faixas_calibradas, calcular_amplitudes, dados_secundários
 
 
@@ -27,47 +29,61 @@ def preencher_meter_run_param(wb ,dados):
     erro_termo = incert_termo.get("maior_erro") if incert_termo else None
 
     
+    # Escreve incerteza combinada transmissor e termoresistência
     if inc_transm is not None and inc_termo is not None:
-        cel = ws.range('M107')
-        cel.formula = f"=SQRT(({inc_transm}^2)+({inc_termo}^2))"
+        cel_inc = encontrar_celula_resolucao(ws)
+        cel_inc.formula = f"=SQRT(({inc_transm}^2)+({inc_termo}^2))"
 
-    
+    # Escreve erro fiducial combinado transmissor e termoresistência
     if erro_transm is not None and erro_termo is not None:
-        cel = ws.range('E117')
-        cel.formula = f"=SQRT(({erro_transm}^2)+({erro_termo}^2))"
+        cel_fid = encontrar_celula_erro_fiducial(ws)
+        cel_fid.formula = f"=SQRT(({erro_transm}^2)+({erro_termo}^2))"
     
-
+    # Escreve incerteza percentual pressão estática
     amplitude = amplitudes.get("pressao_estatica")
     inc_perc = incert_perc_pressao.get("pressao_estatica") if incert_perc_pressao else None
     if amplitude is not None:
-        ws.range("E159").value =  f"={amplitude}*{inc_perc}%"
+        cel_incp = encontrar_celula_incerteza_pressao(ws)
+        cel_incp.value = f"={amplitude}*{inc_perc}%"
 
+    # Escreve erro fiducial pressão estática
     erro_fidu = erro_fid.get("pressao_estatica") if erro_fid else None
     if erro_fiducial is not None:
-        ws.range("E170").value = f"={amplitude}*{erro_fidu}%"
+        cel_err_p = encontrar_celula_erro_fiducial_pressao(ws)
+        cel_err_p.value = f"={amplitude}*{erro_fidu}%"
     
-
+    # Escreve densidade de operação
     densidade_ref = dados_op.get('densidade') if dados_op else None
     if densidade_ref is not None:
-        ws.range("F64").value = densidade_ref
+        cel_densidade = encontrar_celula_densidade_op(ws)
+        cel_densidade.value = densidade_ref
+        
 
+    # Escreve temperatura de operação
     temp_ref = dados_op.get('temperatura') if dados_op else None
     if temp_ref is not None:
-        ws.range("F66").value = temp_ref    
+        cel_tempop=encontrar_celula_temp_op(ws)
+        cel_tempop.value = temp_ref   
 
+    # Escreve pressão de operação
     pressao_ref = dados_op.get('pressao') if dados_op else None
     if pressao_ref is not None:
-        ws.range("F130").value = pressao_ref
+        cel_pop=encontrar_celula_pressao_op(ws)
+        cel_pop.value=pressao_ref
 
+    # Escreve BSW máximo permitido
     bsw_max = dados_op.get('bsw_max') if dados_op else None
     bsw_max = formatar_percentual(bsw_max)
     if bsw_max is not None:
-        ws.range("F374").value = bsw_max
+        cel_bswm=encontrar_celula_bsw_maximo(ws)
+        cel_bswm.value = bsw_max
+    
     
     incert_bsw = dados_op.get('incerteza_bsw') if dados_op else None
     incert_bsw = formatar_percentual(incert_bsw)
     if incert_bsw is not None:
-        ws.range("E379").value = incert_bsw
+        inc_bsw=encontrar_celula_incerteza_bsw(ws)
+        inc_bsw.value = incert_bsw
 
 
 def preencher_equipament_list(wb, dados):

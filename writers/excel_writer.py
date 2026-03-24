@@ -14,7 +14,7 @@ def preencher_gas_parameters(wb, dados):
     icert_comb = incert_temp_comb(incert_transm, incert_termo)
     temp_ref = dados.get('dados_operacao', {}).get('temperatura')
     pres_ref = dados.get('dados_operacao', {}).get('pressao')
-    print('incerteza_comb', icert_comb)
+    
 
     ws = wb.sheets["Gas parameters"]
 
