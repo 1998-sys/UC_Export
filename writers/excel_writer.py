@@ -2,7 +2,11 @@
 import os
 import xlwings as xw
 from writers.utils_writer import (faixas_calibradas, calcular_amplitudes, formatar_celula_valor, incerteza_absoluta,
-                                   erro_fiducial_abs, obter_k, incerteza_temperatura, incert_temp_comb, dados_secundários, dados_placa , obter_respostas)
+                                   erro_fiducial_abs, obter_k, incerteza_temperatura, incert_temp_comb, dados_secundários, dados_placa , obter_respostas,
+encontrar_celula_pressao_ref, encontrar_celula_temperatura_ref, celula_pressao_dif_alta, celula_pressao_dif_media, celula_pressao_dif_baixa, celula_incerteza_alta,
+celula_fid_alta, celula_incerteza_media, celula_fid_media, celula_incert_baixa, celula_fid_baixa, celula_inc_estatica, celula_fid_estatica, celula_k_alta,
+celula_k_media, celula_k_baixa, celula_k_estatica, celula_inc_temp, celula_fid_temp)
+
 
 def preencher_gas_parameters(wb, dados):
     amplitudes = calcular_amplitudes(faixas_calibradas(dados))
@@ -20,95 +24,118 @@ def preencher_gas_parameters(wb, dados):
 
     valor = pres_ref
     if valor is not None:
-        ws.range("F10").value = valor
+        p_ref = encontrar_celula_pressao_ref(ws)
+        p_ref.value=valor
+        p_ref.api.Locked = True
     
     valor = temp_ref
     if valor is not None:
-        ws.range("F12").value = valor
+        t_ref = encontrar_celula_temperatura_ref(ws)
+        t_ref.value=valor
+        t_ref.api.Locked = True
 
     valor = amplitudes.get("dpt_alta")
     if valor is not None:
-        ws.range("F20").value = valor
+        dpt_alta = celula_pressao_dif_alta(ws)
+        dpt_alta.value = valor
+        dpt_alta.api.Locked = True
 
     valor = amplitudes.get("dp_media")
     if valor is not None:
-        ws.range("F22").value = valor
+        dpt_media = celula_pressao_dif_media(ws)
+        dpt_media.value = valor
+        dpt_media.api.Locked = True
 
     valor = amplitudes.get("dp_baixa")
     if valor is not None:
-        ws.range("F24").value = valor
+        dpt_baixa = celula_pressao_dif_baixa(ws)
+        dpt_baixa.value = valor
+        dpt_baixa.api.Locked = True
 
 
     valor = incerteza_abs.get("dpt_alta")
     if valor is not None:
-        cel = ws.range("E33")
-        cel.value = valor
-        cel.api.Locked = True
+        inc_alta = celula_incerteza_alta(ws)
+        inc_alta.value = valor
+        inc_alta.api.Locked = True
+        
     
     valor = erro_fid.get("dpt_alta")
     if valor is not None:
-        cel = ws.range("E35")
-        cel.value = valor
-        cel.api.Locked = True
+        fid_alta = celula_fid_alta(ws)
+        fid_alta.value = valor
+        fid_alta.api.Locked = True
 
         
     valor = incerteza_abs.get("dp_media")
     if valor is not None:
-        cel = ws.range("E53")
-        cel.value = valor
-        cel.api.Locked = True
+        inc_media = celula_incerteza_media(ws)
+        inc_media.value = valor
+        inc_media.api.Locked = True
+    
     
     valor = erro_fid.get("dp_media")
     if valor is not None:
-        cel = ws.range("E55")
-        cel.value = valor
-        cel.api.Locked = True
-        
+        fid_medio = celula_fid_media(ws)
+        fid_medio.value = valor
+        fid_medio.api.Locked = True
 
+        
     valor = incerteza_abs.get("dp_baixa")
     if valor is not None:
-        cel = ws.range("E73")
-        cel.value = valor
-        cel.api.Locked = True
+        inc_baixa = celula_incert_baixa(ws)
+        inc_baixa.value = valor
+        inc_baixa.api.Locked = True
         
-
+        
     valor = erro_fid.get("dp_baixa")
     if valor is not None:
-        cel = ws.range("E75")
-        cel.value = valor
-        cel.api.Locked = True
+        celu_fid_baixa = celula_fid_baixa(ws)
+        celu_fid_baixa.value = valor
+        celu_fid_baixa.api.Locked = True
+        
     
     
     valor = incerteza_abs.get("pressao_estatica")
     if valor is not None:
-        cel = ws.range("E93")
-        cel.value = valor
-        cel.api.Locked = True
+        cel_inc_estatica = celula_inc_estatica(ws)
+        cel_inc_estatica.value = valor
+        cel_inc_estatica.api.Locked = True
         
+    
 
     valor = erro_fid.get("pressao_estatica")
     if valor is not None:
-        cel = ws.range("E95")
-        cel.value = valor
-        cel.api.Locked = True
-    
+        celu_fid_estatica = celula_fid_estatica(ws)
+        celu_fid_estatica.value = valor
+        celu_fid_estatica.api.Locked = True
+        
+
     valor_k = k_val.get("dpt_alta")
     if valor_k is not None:
+        cel_k_alta = celula_k_alta(ws)
+        print(cel_k_alta)
         cel = ws.range('G33')
         cel.value = valor_k
         
     valor_k = k_val.get("dp_media")
     if valor_k is not None:
+        cl_k_media = celula_k_media(ws)
+        print(cl_k_media)
         cel = ws.range('G53')
         cel.value = valor_k
 
     valor_k = k_val.get("dp_baixa")
     if valor_k is not None:
+        cl_k_baixa = celula_k_baixa(ws)
+        print(cl_k_baixa)
         cel = ws.range('G73')
         cel.value = valor_k
     
     valor_k = k_val.get("pressao_estatica")
     if valor_k is not None:
+        cl_k_estatica = celula_k_estatica(ws)
+        print(cl_k_estatica)
         cel = ws.range('G93')
         cel.value = valor_k
 
@@ -135,6 +162,10 @@ def preencher_gas_parameters(wb, dados):
         cel.value = err_termo
     
     if icert_comb is not None:
+        incert_temp = celula_inc_temp(ws)
+        fid_temp = celula_fid_temp(ws)
+        print(fid_temp)
+        print(incert_temp)
         cel = ws.range('E113')
         cel.value = icert_comb.get("incerteza")
         cel.api.Locked = True

@@ -1,6 +1,5 @@
 import math
-
-
+from writers.util_writer_oleo import normalizar
 
 def faixas_calibradas(dados): 
     instrumentos_alvo = [
@@ -336,4 +335,329 @@ def registrar_resposta(chave, valor):
 
 def obter_respostas():
     return respostas_xml
+
+
+def encontrar_celula_pressao_ref(ws):
+    texto_ref = normalizar(
+        "Pressão estática (static pressure), P"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and texto_ref in valor:
+            return ws.range(f"F{i}")
+
+    print('célula da pressão de referencia não encontrada')
+    return None
+
+def encontrar_celula_temperatura_ref(ws):
+    texto_ref = normalizar(
+        "Temperatura (Temperature), T"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and texto_ref in valor:
+            return ws.range(f"F{i}")
+
+    print('Célula da Temperatura de Referencia não encotrada')
+    return None
+
+def celula_pressao_dif_alta(ws):
+    texto_ref = normalizar(
+        "Pressão Diferencial Alta (High Differential Pressure)"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and texto_ref in valor:
+            return ws.range(f"F{i}")
+
+    print('Pressão diferencial alta não encontrada')
+    return None
+
+def celula_pressao_dif_media(ws):
+    texto_ref = normalizar(
+        "Pressão Diferencial Média (Avg Differential Pressure)"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and texto_ref in valor:
+            return ws.range(f"F{i}")
+
+    print('Pressão diferencial média não encontrada')
+    return None
+
+def celula_pressao_dif_baixa(ws):
+    texto_ref = normalizar(
+        "Pressão Diferencial Baixa (Low Differential Pressure)"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and texto_ref in valor:
+            return ws.range(f"F{i}")
+
+    print('Pressão diferencial baixa não encontrada')
+    return None
+
+def celula_incerteza_alta(ws):
+    texto_ref = normalizar(
+        "Pressão diferencial de Alta"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and texto_ref == valor:
+            return ws.range(f"E{i}")
+
+    print('Pressão diferencial não encontrada')
+    return None
+
+def celula_fid_alta(ws):
+    texto_ref = normalizar(
+        "(High Differential Pressure) Erro Fiducial (Fiducial Error)"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and texto_ref == valor:
+            return ws.range(f"E{i}")
+
+    print('Pressão diferencial não encontrada')
+    return None
+
+def celula_incerteza_media(ws):
+    texto_ref = normalizar(
+        "Pressão diferencial de Média"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and normalizar(valor) == texto_ref:
+            return ws.range(f"E{i}")
+
+    print('Pressão diferencial de média não encontrada')
+    return None
+
+def celula_fid_media(ws):
+    texto_ref = normalizar(
+        "(Medium Range Differential Pressure) Fiducial Error"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and normalizar(valor) == texto_ref:
+            #print(f"Encontrado célula de erro fiducial de média {i}: {ws.range(f'E{i}').value}")
+            return ws.range(f"E{i}")
+
+    print('Pressão diferencial de média não encontrada')
+    return None
+
+def celula_incert_baixa(ws):
+    texto_ref = normalizar(
+        "Pressão diferencial de Baixa"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and normalizar(valor) == texto_ref:
+            #print(f"Encontrado célula de incerteza de baixa {i}: {ws.range(f'E{i}').value}")
+            return ws.range(f"E{i}")
+
+    print('Pressão diferencial de baixa não encontrada')
+    return None
+
+def celula_fid_baixa(ws):
+    texto_ref = normalizar(
+        "(Low Range Differential Pressure) Pressure) Fiducial Error"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and normalizar(valor) == texto_ref:
+           # print(f"Encontrado célula de erro fiducial de baixa {i}: {ws.range(f'E{i}').value}")
+            return ws.range(f"E{i}")
+
+    print('erro fiducial de baixa não encontrada')
+    return None
+
+
+def celula_inc_estatica(ws):
+    texto_ref = normalizar(
+        "Pressão estática"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and normalizar(valor) == texto_ref:
+            #print(f"Encontrado célula de erro fiducial de baixa {i}: {ws.range(f'E{i}').value}")
+            return ws.range(f"E{i}")
+
+    print('erro fiducial de baixa não encontrada')
+    return None
+
+def celula_fid_estatica(ws):
+    texto_ref = normalizar(
+        "(Static Pressure) Erro Fiducial (Fiducial Error)"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and normalizar(valor) == texto_ref:
+            #print(f"Encontrado célula de erro fiducial de baixa {i}: {ws.range(f'E{i}').value}")
+            return ws.range(f"E{i}")
+
+    print('erro fiducial de baixa não encontrada')
+    return None
+
+def celula_k_alta(ws):
+    texto_ref = normalizar(
+        "K factor (Alta)"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"G{i}").value)
+
+        if valor and normalizar(valor) == texto_ref:
+            #print(f"Encontrado célula k de alta {i+2}: {ws.range(f'E{i}').value}")
+            return ws.range(f"G{i+2}")
+
+    print('K factor (Alta) não encontrado')
+    return None
+
+def celula_k_media(ws):
+    texto_ref = normalizar(
+        "K factor (Média)"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"G{i}").value)
+
+        if valor and normalizar(valor) == texto_ref:
+            #print(f"Encontrado célula k de alta {i+2}: {ws.range(f'E{i}').value}")
+            return ws.range(f"G{i+2}")
+
+    print('K factor (Média) não encontrado')
+    return None
+
+
+def celula_k_baixa(ws):
+    texto_ref = normalizar(
+        "K factor (Baixa)"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"G{i}").value)
+
+        if valor and normalizar(valor) == texto_ref:
+            #print(f"Encontrado célula k de alta {i+2}: {ws.range(f'E{i}').value}")
+            return ws.range(f"G{i+2}")
+
+    print('K factor (Baixa) não encontrado')
+    return None
+
+
+def celula_k_estatica(ws):
+    texto_ref = normalizar(
+        "K factor estática"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"G{i}").value)
+
+        if valor and normalizar(valor) == texto_ref:
+            print(f"Encontrado célula k de alta {i+2}: {ws.range(f'E{i}').value}")
+            return ws.range(f"F{i}")
+
+    print('K factor presão estática não encontrado')
+    return None
+
+
+def celula_inc_temp(ws):
+    texto_ref = normalizar(
+        "Temperatura"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and texto_ref == valor:
+            print(f"Encontrado célula incerteza de temperatura {i}: {ws.range(f'E{i}').value}")
+            return ws.range(f"F{i}")
+
+    print('célula da incerteza de temperatura não encontrada')
+    return None
+
+
+
+def celula_fid_temp(ws):
+    texto_ref = normalizar(
+        "(Temperature) Erro Fiducial (Fiducial Error)"
+    )
+
+    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"B{i}").value)
+
+        if valor and texto_ref == valor:
+            print(f"Encontrado célula incerteza de temperatura {i}: {ws.range(f'E{i}').value}")
+            return ws.range(f"F{i}")
+
+    print('célula da erro fiducial de temperatura não encontrada')
+    return None
+
+
+
 
