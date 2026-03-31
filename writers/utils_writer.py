@@ -516,7 +516,6 @@ def celula_fid_baixa(ws):
     print('erro fiducial de baixa não encontrada')
     return None
 
-
 def celula_inc_estatica(ws):
     texto_ref = normalizar(
         "Pressão estática"
@@ -585,7 +584,6 @@ def celula_k_media(ws):
     print('K factor (Média) não encontrado')
     return None
 
-
 def celula_k_baixa(ws):
     texto_ref = normalizar(
         "K factor (Baixa)"
@@ -602,7 +600,6 @@ def celula_k_baixa(ws):
 
     print('K factor (Baixa) não encontrado')
     return None
-
 
 def celula_k_estatica(ws):
     texto_ref = normalizar(
@@ -639,8 +636,6 @@ def celula_inc_temp(ws):
     print('célula da incerteza de temperatura não encontrada')
     return None
 
-
-
 def celula_fid_temp(ws):
     texto_ref = normalizar(
         "(Temperature) Erro Fiducial (Fiducial Error)"
@@ -658,6 +653,38 @@ def celula_fid_temp(ws):
     print('célula da erro fiducial de temperatura não encontrada')
     return None
 
+def celula_k_temp(ws):
+    texto_ref = normalizar(
+        "K factor Temp"
+    )
 
+    last_row = ws.range("G" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"G{i}").value)
+
+        if valor and texto_ref == valor:
+            print(f"Encontrado célula k de temperatura {i}: {ws.range(f'E{i}').value}")
+            return ws.range(f"F{i+2}")
+
+    print('célula do k de temperatura não encontrada')
+    return None
+
+def celula_inc_termo(ws):
+    texto_ref = normalizar(
+        "Inc termo"
+    )
+
+    last_row = ws.range("X" + str(ws.cells.last_cell.row)).end("up").row
+
+    for i in range(1, last_row + 1):
+        valor = normalizar(ws.range(f"X{i}").value)
+
+        if valor and texto_ref == valor:
+            print(f"Encontrado célula incerteza de termo {i}: {ws.range(f'E{i}').value}")
+            return ws.range(f"x{i+1}")
+
+    print('célula da incerteza de termo não encontrada')
+    return None
 
 

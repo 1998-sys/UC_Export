@@ -5,7 +5,7 @@ from writers.utils_writer import (faixas_calibradas, calcular_amplitudes, format
                                    erro_fiducial_abs, obter_k, incerteza_temperatura, incert_temp_comb, dados_secundários, dados_placa , obter_respostas,
 encontrar_celula_pressao_ref, encontrar_celula_temperatura_ref, celula_pressao_dif_alta, celula_pressao_dif_media, celula_pressao_dif_baixa, celula_incerteza_alta,
 celula_fid_alta, celula_incerteza_media, celula_fid_media, celula_incert_baixa, celula_fid_baixa, celula_inc_estatica, celula_fid_estatica, celula_k_alta,
-celula_k_media, celula_k_baixa, celula_k_estatica, celula_inc_temp, celula_fid_temp)
+celula_k_media, celula_k_baixa, celula_k_estatica, celula_inc_temp, celula_fid_temp, celula_k_temp, celula_inc_termo)
 
 
 def preencher_gas_parameters(wb, dados):
@@ -154,6 +154,8 @@ def preencher_gas_parameters(wb, dados):
     k_termo = incert_termo.get("k") if incert_termo else None
     err_termo = incert_termo.get("erro") if incert_termo else None
     if inc_termo is not None:
+        # cel_termo = celula_inc_termo(ws)
+        # print(cel_termo)
         cel = ws.range('X112')
         cel.value = inc_termo
         cel = ws.range('Y112')
@@ -164,8 +166,10 @@ def preencher_gas_parameters(wb, dados):
     if icert_comb is not None:
         incert_temp = celula_inc_temp(ws)
         fid_temp = celula_fid_temp(ws)
+        k_temp = celula_k_temp(ws)
         print(fid_temp)
         print(incert_temp)
+        print(k_temp)
         cel = ws.range('E113')
         cel.value = icert_comb.get("incerteza")
         cel.api.Locked = True
