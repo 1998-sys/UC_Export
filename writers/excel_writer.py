@@ -2,11 +2,10 @@
 import os
 import xlwings as xw
 from writers.utils_writer import (faixas_calibradas, calcular_amplitudes, formatar_celula_valor, incerteza_absoluta,
-                                   erro_fiducial_abs, obter_k, incerteza_temperatura, incert_temp_comb, dados_secundários, dados_placa , obter_respostas,
-encontrar_celula_pressao_ref, encontrar_celula_temperatura_ref, celula_pressao_dif_alta, celula_pressao_dif_media, celula_pressao_dif_baixa, celula_incerteza_alta,
-celula_fid_alta, celula_incerteza_media, celula_fid_media, celula_incert_baixa, celula_fid_baixa, celula_inc_estatica, celula_fid_estatica, celula_k_alta,
-celula_k_media, celula_k_baixa, celula_k_estatica, celula_inc_temp, celula_fid_temp, celula_k_temp, celula_inc_termo)
-
+                                   erro_fiducial_abs, obter_k, incerteza_temperatura, incert_temp_comb, dados_secundários, dados_placa, obter_respostas,
+                                   encontrar_celula)
+import re
+import shutil
 
 def preencher_gas_parameters(wb, dados):
     amplitudes = calcular_amplitudes(faixas_calibradas(dados))
@@ -24,73 +23,73 @@ def preencher_gas_parameters(wb, dados):
 
     valor = pres_ref
     if valor is not None:
-        p_ref = encontrar_celula_pressao_ref(ws)
+        p_ref = encontrar_celula(ws,"Pressão estática (static pressure), P",coluna_saida="F")
         p_ref.value=valor
         p_ref.api.Locked = True
     
     valor = temp_ref
     if valor is not None:
-        t_ref = encontrar_celula_temperatura_ref(ws)
+        t_ref = encontrar_celula(ws,"Temperatura (Temperature), T",coluna_saida="F")
         t_ref.value=valor
         t_ref.api.Locked = True
 
     valor = amplitudes.get("dpt_alta")
     if valor is not None:
-        dpt_alta = celula_pressao_dif_alta(ws)
+        dpt_alta = encontrar_celula(ws, "Pressão Diferencial Alta (High Differential Pressure)", coluna_saida="F")
         dpt_alta.value = valor
         dpt_alta.api.Locked = True
 
     valor = amplitudes.get("dp_media")
     if valor is not None:
-        dpt_media = celula_pressao_dif_media(ws)
+        dpt_media = encontrar_celula(ws, "Pressão Diferencial Média (Avg Differential Pressure)", coluna_saida="F")
         dpt_media.value = valor
         dpt_media.api.Locked = True
 
     valor = amplitudes.get("dp_baixa")
     if valor is not None:
-        dpt_baixa = celula_pressao_dif_baixa(ws)
+        dpt_baixa = encontrar_celula(ws, "Pressão Diferencial Baixa (Low Differential Pressure)", coluna_saida="F")
         dpt_baixa.value = valor
         dpt_baixa.api.Locked = True
 
 
     valor = incerteza_abs.get("dpt_alta")
     if valor is not None:
-        inc_alta = celula_incerteza_alta(ws)
+        inc_alta = encontrar_celula(ws, "Pressão diferencial de Alta", coluna_saida="E", tipo_match="exact")
         inc_alta.value = valor
         inc_alta.api.Locked = True
         
     
     valor = erro_fid.get("dpt_alta")
     if valor is not None:
-        fid_alta = celula_fid_alta(ws)
+        fid_alta = encontrar_celula(ws, "(High Differential Pressure) Erro Fiducial (Fiducial Error)", coluna_saida="E", tipo_match="exact")
         fid_alta.value = valor
         fid_alta.api.Locked = True
 
         
     valor = incerteza_abs.get("dp_media")
     if valor is not None:
-        inc_media = celula_incerteza_media(ws)
+        inc_media = encontrar_celula(ws, "Pressão diferencial de Média", coluna_saida="E", tipo_match="exact")
         inc_media.value = valor
         inc_media.api.Locked = True
     
     
     valor = erro_fid.get("dp_media")
     if valor is not None:
-        fid_medio = celula_fid_media(ws)
+        fid_medio = encontrar_celula(ws, "(Medium Range Differential Pressure) Fiducial Error", coluna_saida="E", tipo_match="exact")
         fid_medio.value = valor
         fid_medio.api.Locked = True
 
         
     valor = incerteza_abs.get("dp_baixa")
     if valor is not None:
-        inc_baixa = celula_incert_baixa(ws)
+        inc_baixa = encontrar_celula(ws, "Pressão diferencial de Baixa", coluna_saida="E", tipo_match="exact")
         inc_baixa.value = valor
         inc_baixa.api.Locked = True
         
         
     valor = erro_fid.get("dp_baixa")
     if valor is not None:
-        celu_fid_baixa = celula_fid_baixa(ws)
+        celu_fid_baixa = encontrar_celula(ws, "(Low Range Differential Pressure) Pressure) Fiducial Error", coluna_saida="E", tipo_match="exact")
         celu_fid_baixa.value = valor
         celu_fid_baixa.api.Locked = True
         
@@ -98,7 +97,7 @@ def preencher_gas_parameters(wb, dados):
     
     valor = incerteza_abs.get("pressao_estatica")
     if valor is not None:
-        cel_inc_estatica = celula_inc_estatica(ws)
+        cel_inc_estatica = encontrar_celula(ws, "Pressão estática", coluna_saida="E", tipo_match="exact")
         cel_inc_estatica.value = valor
         cel_inc_estatica.api.Locked = True
         
@@ -106,78 +105,76 @@ def preencher_gas_parameters(wb, dados):
 
     valor = erro_fid.get("pressao_estatica")
     if valor is not None:
-        celu_fid_estatica = celula_fid_estatica(ws)
+        celu_fid_estatica = encontrar_celula(ws, "(Static Pressure) Erro Fiducial (Fiducial Error)", coluna_saida="E", tipo_match="exact")
         celu_fid_estatica.value = valor
         celu_fid_estatica.api.Locked = True
         
 
     valor_k = k_val.get("dpt_alta")
     if valor_k is not None:
-        cel_k_alta = celula_k_alta(ws)
-        print(cel_k_alta)
-        cel = ws.range('G33')
-        cel.value = valor_k
+        cel_k_alta = encontrar_celula(ws, "K factor (Alta)", coluna_busca="G", coluna_saida="G", tipo_match="exact", offset_linha=2)
+        cel_k_alta.value=valor_k
+        cel_k_alta.api.Locked = True
+        
         
     valor_k = k_val.get("dp_media")
     if valor_k is not None:
-        cl_k_media = celula_k_media(ws)
-        print(cl_k_media)
-        cel = ws.range('G53')
-        cel.value = valor_k
+        cl_k_media = encontrar_celula(ws, "K factor (Média)", coluna_busca="G", coluna_saida="G", tipo_match="exact", offset_linha=2)
+        cl_k_media.value = valor_k
+        cl_k_media.api.Locked = True
 
     valor_k = k_val.get("dp_baixa")
     if valor_k is not None:
-        cl_k_baixa = celula_k_baixa(ws)
-        print(cl_k_baixa)
-        cel = ws.range('G73')
-        cel.value = valor_k
+        cl_k_baixa = encontrar_celula(ws, "K factor (Baixa)", coluna_busca="G", coluna_saida="G", tipo_match="exact", offset_linha=2)
+        cl_k_baixa.value = valor_k
+        cl_k_baixa.api.Locked = True
+        
     
     valor_k = k_val.get("pressao_estatica")
     if valor_k is not None:
-        cl_k_estatica = celula_k_estatica(ws)
-        print(cl_k_estatica)
-        cel = ws.range('G93')
-        cel.value = valor_k
+        cl_k_estatica = encontrar_celula(ws, "K factor estática", coluna_busca="G", coluna_saida="G", tipo_match="exact", offset_linha=2)
+        cl_k_estatica.value = valor_k
+        cl_k_estatica.api.Locked = True
 
     inc_transm = incert_transm.get("incerteza") if incert_transm else None
     k_trasm = incert_transm.get("k") if incert_transm else None
     err_transm = incert_transm.get("erro") if incert_transm else None
     if inc_transm is not None:
-        cel = ws.range('X116')
-        cel.value = inc_transm
-        cel = ws.range('Y116')
-        cel.value = k_trasm
-        cel = ws.range('Z116')  
-        cel.value = err_transm
+        cel_inc_transm = encontrar_celula(ws, "Inc  transm",coluna_busca='X' ,coluna_saida="X", tipo_match="exact", offset_linha=1)
+        cel_inc_transm.value = inc_transm
+        cel_inc_transm.api.Locked = True
+        cel_k_transm = encontrar_celula(ws, "k transm",coluna_busca='Y' ,coluna_saida="Y", tipo_match="exact", offset_linha=1)
+        cel_k_transm.value = k_trasm
+        cel_k_transm.api.Locked = True     
+        cel_err_transm = encontrar_celula(ws, "erro residual",coluna_busca='Z' ,coluna_saida="Z", tipo_match="exact", offset_linha=1)
+        cel_err_transm.value = err_transm       
+        cel_err_transm.api.Locked = True
+        
     
     inc_termo = incert_termo.get("incerteza") if incert_termo else None
     k_termo = incert_termo.get("k") if incert_termo else None
     err_termo = incert_termo.get("erro") if incert_termo else None
     if inc_termo is not None:
-        # cel_termo = celula_inc_termo(ws)
-        # print(cel_termo)
-        cel = ws.range('X112')
-        cel.value = inc_termo
-        cel = ws.range('Y112')
-        cel.value = k_termo
-        cel = ws.range('Z112')
-        cel.value = err_termo
-    
+        cel_inc_termo = encontrar_celula(ws, "Inc termo",coluna_busca='X' ,coluna_saida="X", tipo_match="exact", offset_linha=1)
+        cel_inc_termo.value = inc_termo
+        cel_inc_termo.api.Locked = True
+        cel_k_termo = encontrar_celula(ws, "k termo",coluna_busca='Y' ,coluna_saida="Y", tipo_match="exact", offset_linha=1)
+        cel_k_termo.value = k_termo
+        cel_k_termo.api.Locked = True
+        cel_err_termo = encontrar_celula(ws, "erro residual",coluna_busca='Z' ,coluna_saida="Z", tipo_match="exact", offset_linha=1)
+        cel_err_termo.value = err_termo
+        cel_err_termo.api.Locked = True
+        
     if icert_comb is not None:
-        incert_temp = celula_inc_temp(ws)
-        fid_temp = celula_fid_temp(ws)
-        k_temp = celula_k_temp(ws)
-        print(fid_temp)
-        print(incert_temp)
-        print(k_temp)
-        cel = ws.range('E113')
-        cel.value = icert_comb.get("incerteza")
-        cel.api.Locked = True
-        cel = ws.range('G113')
-        cel.value = icert_comb.get("k")
-        cel = ws.range('E115')
-        cel.value = icert_comb.get("erro")
-        cel.api.Locked = True
+        incert_temp = encontrar_celula(ws, "Temperatura", coluna_saida="E", tipo_match="exact")
+        fid_temp = encontrar_celula(ws, "(Temperature) Erro Fiducial (Fiducial Error)", coluna_saida="E", tipo_match="exact")
+        k_temp = encontrar_celula(ws, "K factor Temp", coluna_busca="G", coluna_saida="G", tipo_match="exact", offset_linha=2)
+        incert_temp.value = icert_comb.get("incerteza")
+        incert_temp.api.Locked = True
+        fid_temp.value = icert_comb.get("erro")
+        fid_temp.api.Locked = True
+        k_temp.value = icert_comb.get("k")
+        k_temp.api.Locked = True
     
     amplitudes = None
     incerteza_abs = None
@@ -412,7 +409,47 @@ def preencher_report(wb, dados):
     ws.range("C13").clear_contents()
     ws.range("C13").value = texto
 
+def _incrementar_nome(caminho_excel):
+    """Gera um novo caminho incrementando o último número do nome do arquivo.
+    Ex: UCG-FE-3115-03-26-04.xlsx → UCG-FE-3115-03-26-05.xlsx
+    """
+    pasta = os.path.dirname(caminho_excel)
+    nome = os.path.splitext(os.path.basename(caminho_excel))[0]
+    ext = os.path.splitext(caminho_excel)[1]
+
+    match = re.search(r'(\d+)(?!.*\d)', nome)
+    if match:
+        numero = match.group(1)
+        novo_numero = str(int(numero) + 1).zfill(len(numero))
+        novo_nome = nome[:match.start()] + novo_numero + nome[match.end():]
+    else:
+        novo_nome = nome + "_1"
+
+    return os.path.join(pasta, novo_nome + ext)
+
+
 def processar_planilha_gas(caminho_excel, dados):
+    """
+    Gera uma nova revisão da planilha de CI de gás a partir de um template existente,
+    preenchendo todas as abas com os dados extraídos dos certificados XML.
+
+    O arquivo de origem nunca é alterado. Uma cópia com nome incrementado é criada
+    antes de qualquer escrita (ex: *-04.xlsx → *-05.xlsx), garantindo rastreabilidade
+    de revisões e integridade do template.
+
+    Args:
+        caminho_excel (str): Caminho absoluto da planilha de referência (revisão anterior).
+        dados (dict): Dados consolidados dos instrumentos, incluindo XMLs parseados,
+                      condições operacionais e resultados calculados.
+
+    Raises:
+        Exception: Propaga qualquer exceção do xlwings; a instância do Excel é
+                   encerrada via `finally` independentemente do resultado.
+    """
+    import shutil
+
+    novo_caminho = _incrementar_nome(caminho_excel)
+    shutil.copy2(caminho_excel, novo_caminho)
 
     app = xw.App(visible=False)
     app.display_alerts = False
@@ -421,7 +458,7 @@ def processar_planilha_gas(caminho_excel, dados):
     try:
 
         wb = app.books.open(
-            caminho_excel,
+            novo_caminho,
             update_links=False,
             read_only=False,
             ignore_read_only_recommended=True

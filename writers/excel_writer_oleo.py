@@ -106,7 +106,7 @@ def preencher_equipament_list(wb, dados):
         ns = info.get("numero_serie")
         cert = info.get("certificado")
 
-        # 🔹 TAG + NS na mesma célula (coluna D)
+        
         if tag or ns:
 
             if tag and ns:
@@ -118,7 +118,7 @@ def preencher_equipament_list(wb, dados):
 
             celula = ws.range(f"D{linha}")
             celula.value = texto
-            celula.api.WrapText = True  # 🔥 essencial pro \n funcionar
+            celula.api.WrapText = True  
 
         # 🔹 Certificado na coluna F
         if cert is not None:

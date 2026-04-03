@@ -1,7 +1,17 @@
 import math
 from writers.util_writer_oleo import normalizar
 
-def faixas_calibradas(dados): 
+def faixas_calibradas(dados):
+    """
+    Extrai a faixa calibrada (min/max) de cada instrumento de pressão dos dados coletados.
+
+    Parâmetros:
+        dados (dict): Dicionário com os dados coletados dos instrumentos.
+                      Chaves esperadas: "dpt_alta", "dp_media", "dp_baixa", "pressao_estatica".
+
+    Retorno:
+        dict: Mapeamento { nome_instrumento: { "min": float|None, "max": float|None } }
+    """
     instrumentos_alvo = [
         "dpt_alta",
         "dp_media",
@@ -31,6 +41,16 @@ def faixas_calibradas(dados):
     return resultado
 
 def calcular_amplitudes(faixas):
+    """
+    Calcula a amplitude (max - min) de cada instrumento a partir das faixas calibradas.
+
+    Parâmetros:
+        faixas (dict): Resultado de faixas_calibradas().
+
+    Retorno:
+        dict: Mapeamento { nome_instrumento: float|None }
+              None quando min ou max estiver ausente ou inválido.
+    """
     resultado = {}
 
     for nome, valores in faixas.items():
@@ -48,11 +68,30 @@ def calcular_amplitudes(faixas):
     return resultado
 
 def formatar_celula_valor(cell):
+    """
+    Aplica formatação padrão a uma célula de valor preenchido pelo sistema:
+    fonte Calibri 10pt e fundo laranja claro (255, 204, 153).
+
+    Parâmetros:
+        cell: Objeto de célula xlwings.
+    """
     cell.api.Font.Name = "Calibri"
     cell.api.Font.Size = 10
     cell.color = (255, 204, 153) 
 
 def incerteza_absoluta(dados, amplitudes):
+    """
+    Gera fórmulas Excel de incerteza absoluta para cada instrumento.
+    Fórmula: amplitude * incerteza_percentual%
+
+    Parâmetros:
+        dados (dict): Dados coletados dos instrumentos.
+        amplitudes (dict): Resultado de calcular_amplitudes().
+
+    Retorno:
+        dict: Mapeamento { nome_instrumento: str|None }
+              Valor é uma string de fórmula Excel (ex: "=150.0*0.075%") ou None.
+    """
     resultado = {}
     for nome, amplitude in amplitudes.items():
         if amplitude is None:
@@ -83,6 +122,18 @@ def incerteza_absoluta(dados, amplitudes):
     return resultado
 
 def erro_fiducial_abs(dados, amplitudes):
+    """
+    Gera fórmulas Excel de erro fiducial absoluto para cada instrumento.
+    Fórmula: amplitude * erro_fiducial_percentual%
+
+    Parâmetros:
+        dados (dict): Dados coletados dos instrumentos.
+        amplitudes (dict): Resultado de calcular_amplitudes().
+
+    Retorno:
+        dict: Mapeamento { nome_instrumento: str|None }
+              Valor é uma string de fórmula Excel ou None.
+    """
     resultado = {}
     for nome, amplitude in amplitudes.items():
         if amplitude is None:
@@ -115,6 +166,18 @@ def erro_fiducial_abs(dados, amplitudes):
     return resultado
 
 def obter_k(dados):
+    """
+    Determina o fator K de cobertura para cada instrumento de pressão.
+    Seleciona o K associado ao ponto de maior incerteza; em caso de empate,
+    retorna o maior K entre os candidatos. Pontos com valor "NI" são ignorados.
+
+    Parâmetros:
+        dados (dict): Dados coletados dos instrumentos. Apenas instrumentos
+                      com tipo == "pressao" são processados.
+
+    Retorno:
+        dict: Mapeamento { nome_instrumento: float|None }
+    """
     resultado = {}
 
     for nome, instrumento_data in dados.items():
@@ -166,6 +229,19 @@ def obter_k(dados):
     return resultado
 
 def incerteza_temperatura(dados):
+    """
+    Identifica o ponto crítico de calibração de um instrumento de temperatura.
+    Critério: maior incerteza absoluta; desempate pelo maior K.
+    O campo "erro" do ponto retornado é substituído pelo maior erro absoluto
+    encontrado em todos os pontos do instrumento.
+
+    Parâmetros:
+        dados (dict): Dados de um único instrumento (transmissor ou termoresistência).
+
+    Retorno:
+        dict|None: Ponto de calibração crítico com chaves "incerteza", "erro", "k",
+                   ou None se não houver pontos válidos.
+    """
     if not dados:
         return None
 
@@ -216,7 +292,19 @@ def incerteza_temperatura(dados):
     return melhor_ponto
 
 def incert_temp_comb(incert_transm, incert_termo):
+    """
+    Combina as incertezas do transmissor de temperatura e da termoresistência
+    pela regra da raiz da soma dos quadrados (RSS), gerando fórmulas Excel.
+    Se apenas um dos instrumentos estiver disponível, retorna o existente sem combinação.
 
+    Parâmetros:
+        incert_transm (dict|None): Ponto crítico do transmissor (saída de incerteza_temperatura).
+        incert_termo (dict|None): Ponto crítico da termoresistência (saída de incerteza_temperatura).
+
+    Retorno:
+        dict|None: { "incerteza": str (fórmula Excel), "erro": str (fórmula Excel), "k": 2 }
+                   ou None em caso de dados insuficientes.
+    """
     if not incert_termo:
         return incert_transm
 
@@ -233,8 +321,8 @@ def incert_temp_comb(incert_transm, incert_termo):
         if None in (u_transm, u_termo, erro_transm, erro_termo):
             return None
 
-        formula_incerteza = f"=SQRT(({u_transm})^2 + ({u_termo})^2)"
-        formula_erro = f"=SQRT(({erro_transm})^2 + ({erro_termo})^2)"
+        formula_incerteza = f"=SQRT(SUMSQ({u_transm},{u_termo}))"
+        formula_erro = f"=SQRT(SUMSQ({erro_transm},{erro_termo}))"
 
         return {
             "incerteza": formula_incerteza,
@@ -246,7 +334,18 @@ def incert_temp_comb(incert_transm, incert_termo):
         return None
 
 def dados_secundários(dados):
+    """
+    Extrai os dados de identificação (certificado, número de série, tag) dos instrumentos
+    secundários: DPTs (alta/média/baixa), pressão estática, transmissor de temperatura
+    e termoresistência.
 
+    Parâmetros:
+        dados (dict): Dados coletados dos instrumentos.
+
+    Retorno:
+        dict: Mapeamento { nome_instrumento: { "certificado", "numero_serie", "tag" } }
+              Para o transmissor de temperatura, os campos são extraídos do sub-dict "transmissor".
+    """
     instrumentos_alvo = [
         "dpt_alta",
         "dp_media",
@@ -290,7 +389,17 @@ def dados_secundários(dados):
     return resultado
 
 def dados_placa(dados):
+    """
+    Extrai os dados de identificação e metrológicos da placa de orifício.
 
+    Parâmetros:
+        dados (dict): Dados coletados. Chave esperada: "placa".
+
+    Retorno:
+        dict: { "certificado", "numero_serie", "tag", "coef_dilatacao",
+                "diametro_orificio": { "valor", "incerteza", "k", "aprovado" } }
+              Todos os campos são None se a placa não estiver presente.
+    """
     placa = dados.get("placa")
 
     if placa is None:
@@ -331,360 +440,82 @@ def dados_placa(dados):
 respostas_xml = {}
 
 def registrar_resposta(chave, valor):
+    """
+    Registra a resposta do usuário para uma etapa de importação XML.
+
+    Parâmetros:
+        chave (str): Identificador da etapa (ex: "dpt_alta", "placa").
+        valor (bool): True se o usuário confirmou a importação, False caso contrário.
+    """
     respostas_xml[chave] = valor
 
 def obter_respostas():
+    """
+    Retorna o dicionário com todas as respostas de importação XML registradas na sessão.
+
+    Retorno:
+        dict: Mapeamento { chave: bool }
+    """
     return respostas_xml
 
 
-def encontrar_celula_pressao_ref(ws):
-    texto_ref = normalizar(
-        "Pressão estática (static pressure), P"
-    )
+def encontrar_celula(
+    ws,
+    texto_busca,
+    coluna_busca="B",
+    coluna_saida="F",
+    tipo_match="contains",
+    offset_linha=0,
+    debug=False
+):
+    """
+    Localiza uma célula na planilha pelo conteúdo textual de uma coluna de referência
+    e retorna a célula de destino na mesma linha (com offset opcional).
 
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+    Parâmetros:
+        ws: Sheet xlwings da planilha ativa.
+        texto_busca (str): Texto a ser buscado (será normalizado internamente).
+        coluna_busca (str): Coluna onde o texto será procurado. Padrão: "B".
+        coluna_saida (str): Coluna da célula a ser retornada. Padrão: "F".
+        tipo_match (str): Modo de comparação:
+                          "contains" — texto_busca contido no valor da célula (padrão);
+                          "exact"    — correspondência exata.
+        offset_linha (int): Deslocamento de linhas aplicado à linha encontrada antes de
+                            retornar a célula de saída. Padrão: 0.
+        debug (bool): Se True, imprime no console a linha encontrada ou a ausência do texto.
 
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
+    Retorno:
+        xlwings.Range | None: Célula de destino, ou None se o texto não for encontrado.
+    """
+    texto_ref = normalizar(texto_busca)
 
-        if valor and texto_ref in valor:
-            return ws.range(f"F{i}")
-
-    print('célula da pressão de referencia não encontrada')
-    return None
-
-def encontrar_celula_temperatura_ref(ws):
-    texto_ref = normalizar(
-        "Temperatura (Temperature), T"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and texto_ref in valor:
-            return ws.range(f"F{i}")
-
-    print('Célula da Temperatura de Referencia não encotrada')
-    return None
-
-def celula_pressao_dif_alta(ws):
-    texto_ref = normalizar(
-        "Pressão Diferencial Alta (High Differential Pressure)"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+    last_row = ws.range(coluna_busca + str(ws.cells.last_cell.row)).end("up").row
 
     for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
+        valor_celula = ws.range(f"{coluna_busca}{i}").value
+        valor = normalizar(valor_celula)
 
-        if valor and texto_ref in valor:
-            return ws.range(f"F{i}")
+        if not valor:
+            continue
 
-    print('Pressão diferencial alta não encontrada')
-    return None
+        if (
+            (tipo_match == "contains" and texto_ref in valor)
+            or (tipo_match == "exact" and texto_ref == valor)
+        ):
+            linha_saida = i + offset_linha
 
-def celula_pressao_dif_media(ws):
-    texto_ref = normalizar(
-        "Pressão Diferencial Média (Avg Differential Pressure)"
-    )
+            if debug:
+                print(f"Encontrado '{texto_busca}' na linha {i} → retorno {coluna_saida}{linha_saida}")
 
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
+            return ws.range(f"{coluna_saida}{linha_saida}")
 
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
+    if debug:
+        print(f"'{texto_busca}' não encontrado")
 
-        if valor and texto_ref in valor:
-            return ws.range(f"F{i}")
-
-    print('Pressão diferencial média não encontrada')
-    return None
-
-def celula_pressao_dif_baixa(ws):
-    texto_ref = normalizar(
-        "Pressão Diferencial Baixa (Low Differential Pressure)"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and texto_ref in valor:
-            return ws.range(f"F{i}")
-
-    print('Pressão diferencial baixa não encontrada')
-    return None
-
-def celula_incerteza_alta(ws):
-    texto_ref = normalizar(
-        "Pressão diferencial de Alta"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and texto_ref == valor:
-            return ws.range(f"E{i}")
-
-    print('Pressão diferencial não encontrada')
-    return None
-
-def celula_fid_alta(ws):
-    texto_ref = normalizar(
-        "(High Differential Pressure) Erro Fiducial (Fiducial Error)"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and texto_ref == valor:
-            return ws.range(f"E{i}")
-
-    print('Pressão diferencial não encontrada')
-    return None
-
-def celula_incerteza_media(ws):
-    texto_ref = normalizar(
-        "Pressão diferencial de Média"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and normalizar(valor) == texto_ref:
-            return ws.range(f"E{i}")
-
-    print('Pressão diferencial de média não encontrada')
-    return None
-
-def celula_fid_media(ws):
-    texto_ref = normalizar(
-        "(Medium Range Differential Pressure) Fiducial Error"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and normalizar(valor) == texto_ref:
-            #print(f"Encontrado célula de erro fiducial de média {i}: {ws.range(f'E{i}').value}")
-            return ws.range(f"E{i}")
-
-    print('Pressão diferencial de média não encontrada')
-    return None
-
-def celula_incert_baixa(ws):
-    texto_ref = normalizar(
-        "Pressão diferencial de Baixa"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and normalizar(valor) == texto_ref:
-            #print(f"Encontrado célula de incerteza de baixa {i}: {ws.range(f'E{i}').value}")
-            return ws.range(f"E{i}")
-
-    print('Pressão diferencial de baixa não encontrada')
-    return None
-
-def celula_fid_baixa(ws):
-    texto_ref = normalizar(
-        "(Low Range Differential Pressure) Pressure) Fiducial Error"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and normalizar(valor) == texto_ref:
-           # print(f"Encontrado célula de erro fiducial de baixa {i}: {ws.range(f'E{i}').value}")
-            return ws.range(f"E{i}")
-
-    print('erro fiducial de baixa não encontrada')
-    return None
-
-def celula_inc_estatica(ws):
-    texto_ref = normalizar(
-        "Pressão estática"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and normalizar(valor) == texto_ref:
-            #print(f"Encontrado célula de erro fiducial de baixa {i}: {ws.range(f'E{i}').value}")
-            return ws.range(f"E{i}")
-
-    print('erro fiducial de baixa não encontrada')
-    return None
-
-def celula_fid_estatica(ws):
-    texto_ref = normalizar(
-        "(Static Pressure) Erro Fiducial (Fiducial Error)"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and normalizar(valor) == texto_ref:
-            #print(f"Encontrado célula de erro fiducial de baixa {i}: {ws.range(f'E{i}').value}")
-            return ws.range(f"E{i}")
-
-    print('erro fiducial de baixa não encontrada')
-    return None
-
-def celula_k_alta(ws):
-    texto_ref = normalizar(
-        "K factor (Alta)"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"G{i}").value)
-
-        if valor and normalizar(valor) == texto_ref:
-            #print(f"Encontrado célula k de alta {i+2}: {ws.range(f'E{i}').value}")
-            return ws.range(f"G{i+2}")
-
-    print('K factor (Alta) não encontrado')
-    return None
-
-def celula_k_media(ws):
-    texto_ref = normalizar(
-        "K factor (Média)"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"G{i}").value)
-
-        if valor and normalizar(valor) == texto_ref:
-            #print(f"Encontrado célula k de alta {i+2}: {ws.range(f'E{i}').value}")
-            return ws.range(f"G{i+2}")
-
-    print('K factor (Média) não encontrado')
-    return None
-
-def celula_k_baixa(ws):
-    texto_ref = normalizar(
-        "K factor (Baixa)"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"G{i}").value)
-
-        if valor and normalizar(valor) == texto_ref:
-            #print(f"Encontrado célula k de alta {i+2}: {ws.range(f'E{i}').value}")
-            return ws.range(f"G{i+2}")
-
-    print('K factor (Baixa) não encontrado')
-    return None
-
-def celula_k_estatica(ws):
-    texto_ref = normalizar(
-        "K factor estática"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"G{i}").value)
-
-        if valor and normalizar(valor) == texto_ref:
-            print(f"Encontrado célula k de alta {i+2}: {ws.range(f'E{i}').value}")
-            return ws.range(f"F{i}")
-
-    print('K factor presão estática não encontrado')
     return None
 
 
-def celula_inc_temp(ws):
-    texto_ref = normalizar(
-        "Temperatura"
-    )
 
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
 
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and texto_ref == valor:
-            print(f"Encontrado célula incerteza de temperatura {i}: {ws.range(f'E{i}').value}")
-            return ws.range(f"F{i}")
-
-    print('célula da incerteza de temperatura não encontrada')
-    return None
-
-def celula_fid_temp(ws):
-    texto_ref = normalizar(
-        "(Temperature) Erro Fiducial (Fiducial Error)"
-    )
-
-    last_row = ws.range("B" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"B{i}").value)
-
-        if valor and texto_ref == valor:
-            print(f"Encontrado célula incerteza de temperatura {i}: {ws.range(f'E{i}').value}")
-            return ws.range(f"F{i}")
-
-    print('célula da erro fiducial de temperatura não encontrada')
-    return None
-
-def celula_k_temp(ws):
-    texto_ref = normalizar(
-        "K factor Temp"
-    )
-
-    last_row = ws.range("G" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"G{i}").value)
-
-        if valor and texto_ref == valor:
-            print(f"Encontrado célula k de temperatura {i}: {ws.range(f'E{i}').value}")
-            return ws.range(f"F{i+2}")
-
-    print('célula do k de temperatura não encontrada')
-    return None
-
-def celula_inc_termo(ws):
-    texto_ref = normalizar(
-        "Inc termo"
-    )
-
-    last_row = ws.range("X" + str(ws.cells.last_cell.row)).end("up").row
-
-    for i in range(1, last_row + 1):
-        valor = normalizar(ws.range(f"X{i}").value)
-
-        if valor and texto_ref == valor:
-            print(f"Encontrado célula incerteza de termo {i}: {ws.range(f'E{i}').value}")
-            return ws.range(f"x{i+1}")
-
-    print('célula da incerteza de termo não encontrada')
-    return None
 
 
