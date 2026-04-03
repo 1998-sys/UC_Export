@@ -199,20 +199,27 @@ def preencher_meter_run_parameter(wb, dados):
     coef_placa = placa_dados.get("coef_dilatacao", None)
 
     if diametro is not None:
-        cel = ws.range("F42")
-        cel.value = diametro
+        cel_diamentro_po =encontrar_celula(ws, "Diâmetro do orificio medido (Orifice bore Diameter)", coluna_busca="B", coluna_saida="F", tipo_match="exact")
+        cel_diamentro_po.value = diametro
+        cel_diamentro_po.api.Locked = True
+        
     
     if incert is not None:
-        cel = ws.range("E49")
-        cel.value = incert
+        cel_incert_po = encontrar_celula(ws, "(Uncertainty) PO", coluna_busca="E", coluna_saida="E", tipo_match="exact", offset_linha=2)
+        cel_incert_po.value = incert
+        cel_incert_po.api.Locked = True
+        
 
     if k_placa is not None:
-        cel = ws.range("I49")
-        cel.value = k_placa
+        k_placa_cel = encontrar_celula(ws, "K factor PO", coluna_busca="I", coluna_saida="I", tipo_match="exact", offset_linha=2)
+        k_placa_cel.value = k_placa
+        k_placa_cel.api.Locked = True
+    
 
     if coef_placa is not None:
-        cel = ws.range("N44")
-        cel.value = coef_placa    
+        coef_placa_cel = encontrar_celula(ws, "Coeficiente de exp. Térmica (Thermal coefficient PO)", coluna_busca="I", coluna_saida="N", tipo_match="exact")
+        coef_placa_cel.value = coef_placa
+        coef_placa_cel.api.Locked = True
     
     placa_dados= None
     diametro = None
