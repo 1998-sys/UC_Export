@@ -1,5 +1,7 @@
 import math
 from writers.util_writer_oleo import normalizar
+import os
+import re
 
 def faixas_calibradas(dados):
     """
@@ -458,7 +460,6 @@ def obter_respostas():
     """
     return respostas_xml
 
-
 def encontrar_celula(
     ws,
     texto_busca,
@@ -514,8 +515,36 @@ def encontrar_celula(
 
     return None
 
+def incrementar_nome(caminho_excel):
+    """Gera um novo caminho incrementando o último número do nome do arquivo.
+    Ex: UCG-FE-3115-03-26-04.xlsx → UCG-FE-3115-03-26-05.xlsx
+    """
+    pasta = os.path.dirname(caminho_excel)
+    nome = os.path.splitext(os.path.basename(caminho_excel))[0]
+    ext = os.path.splitext(caminho_excel)[1]
 
+    match = re.search(r'(\d+)(?!.*\d)', nome)
+    if match:
+        numero = match.group(1)
+        novo_numero = str(int(numero) + 1).zfill(len(numero))
+        novo_nome = nome[:match.start()] + novo_numero + nome[match.end():]
+    else:
+        novo_nome = nome + "_1"
 
+    return os.path.join(pasta, novo_nome + ext)
 
+def alterar_ncalculo(texto):
+    def repl(match):
+        trecho = match.group(0)
 
+        match_num = re.search(r'(\d+)$', trecho)
+        if match_num:
+            numero = match_num.group(1)
+            novo_numero = str(int(numero) + 1).zfill(len(numero))
+            return trecho[:match_num.start()] + novo_numero
+
+        return trecho
+
+    # pega tudo que começa com -UCG- até o final do código
+    return re.sub(r'-UCG-[\w-]+', repl, texto)
 

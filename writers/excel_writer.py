@@ -3,9 +3,11 @@ import os
 import xlwings as xw
 from writers.utils_writer import (faixas_calibradas, calcular_amplitudes, formatar_celula_valor, incerteza_absoluta,
                                    erro_fiducial_abs, obter_k, incerteza_temperatura, incert_temp_comb, dados_secundários, dados_placa, obter_respostas,
-                                   encontrar_celula)
+                                   encontrar_celula, incrementar_nome, alterar_ncalculo)
 import re
 import shutil
+
+
 
 def preencher_gas_parameters(wb, dados):
     amplitudes = calcular_amplitudes(faixas_calibradas(dados))
@@ -139,6 +141,7 @@ def preencher_gas_parameters(wb, dados):
     inc_transm = incert_transm.get("incerteza") if incert_transm else None
     k_trasm = incert_transm.get("k") if incert_transm else None
     err_transm = incert_transm.get("erro") if incert_transm else None
+    
     if inc_transm is not None:
         cel_inc_transm = encontrar_celula(ws, "Inc  transm",coluna_busca='X' ,coluna_saida="X", tipo_match="exact", offset_linha=1)
         cel_inc_transm.value = inc_transm
@@ -146,7 +149,7 @@ def preencher_gas_parameters(wb, dados):
         cel_k_transm = encontrar_celula(ws, "k transm",coluna_busca='Y' ,coluna_saida="Y", tipo_match="exact", offset_linha=1)
         cel_k_transm.value = k_trasm
         cel_k_transm.api.Locked = True     
-        cel_err_transm = encontrar_celula(ws, "erro residual",coluna_busca='Z' ,coluna_saida="Z", tipo_match="exact", offset_linha=1)
+        cel_err_transm = encontrar_celula(ws, "erro residual transm",coluna_busca='Z' ,coluna_saida="Z", tipo_match="exact", offset_linha=1)
         cel_err_transm.value = err_transm       
         cel_err_transm.api.Locked = True
         
@@ -154,6 +157,7 @@ def preencher_gas_parameters(wb, dados):
     inc_termo = incert_termo.get("incerteza") if incert_termo else None
     k_termo = incert_termo.get("k") if incert_termo else None
     err_termo = incert_termo.get("erro") if incert_termo else None
+    
     if inc_termo is not None:
         cel_inc_termo = encontrar_celula(ws, "Inc termo",coluna_busca='X' ,coluna_saida="X", tipo_match="exact", offset_linha=1)
         cel_inc_termo.value = inc_termo
@@ -161,7 +165,7 @@ def preencher_gas_parameters(wb, dados):
         cel_k_termo = encontrar_celula(ws, "k termo",coluna_busca='Y' ,coluna_saida="Y", tipo_match="exact", offset_linha=1)
         cel_k_termo.value = k_termo
         cel_k_termo.api.Locked = True
-        cel_err_termo = encontrar_celula(ws, "erro residual",coluna_busca='Z' ,coluna_saida="Z", tipo_match="exact", offset_linha=1)
+        cel_err_termo = encontrar_celula(ws, "erro residual termo",coluna_busca='Z' ,coluna_saida="Z", tipo_match="exact", offset_linha=1)
         cel_err_termo.value = err_termo
         cel_err_termo.api.Locked = True
         
@@ -373,6 +377,18 @@ def preencher_report(wb, dados):
     respostas = obter_respostas()
     ws = wb.sheets["Report"]
 
+    celula_titulo = encontrar_celula(ws,"Relatório de Cálculo de Incerteza",coluna_busca="B",  coluna_saida="B", tipo_match="contains")
+    if celula_titulo is not None:
+        texto_atual = celula_titulo.value
+
+        if texto_atual:
+            novo_texto = alterar_ncalculo(texto_atual)
+            celula_titulo.value = novo_texto
+        else:
+            print("Célula encontrada, mas vazia")
+    else:
+        print("Célula não encontrada")
+
     placa = respostas.get("placa", False)
     cromatografia = respostas.get("cromatografia", False)
 
@@ -406,26 +422,11 @@ def preencher_report(wb, dados):
     else:
         texto = ""
 
-    ws.range("C13").clear_contents()
-    ws.range("C13").value = texto
+    motivo_ci = encontrar_celula(ws, "Motivo da Revisão (Reason for Revision)", coluna_busca="B",coluna_saida="C", tipo_match="exact")
+    motivo_ci.clear_contents()
+    motivo_ci.value = texto
+    
 
-def _incrementar_nome(caminho_excel):
-    """Gera um novo caminho incrementando o último número do nome do arquivo.
-    Ex: UCG-FE-3115-03-26-04.xlsx → UCG-FE-3115-03-26-05.xlsx
-    """
-    pasta = os.path.dirname(caminho_excel)
-    nome = os.path.splitext(os.path.basename(caminho_excel))[0]
-    ext = os.path.splitext(caminho_excel)[1]
-
-    match = re.search(r'(\d+)(?!.*\d)', nome)
-    if match:
-        numero = match.group(1)
-        novo_numero = str(int(numero) + 1).zfill(len(numero))
-        novo_nome = nome[:match.start()] + novo_numero + nome[match.end():]
-    else:
-        novo_nome = nome + "_1"
-
-    return os.path.join(pasta, novo_nome + ext)
 
 
 def processar_planilha_gas(caminho_excel, dados):
@@ -446,9 +447,7 @@ def processar_planilha_gas(caminho_excel, dados):
         Exception: Propaga qualquer exceção do xlwings; a instância do Excel é
                    encerrada via `finally` independentemente do resultado.
     """
-    import shutil
-
-    novo_caminho = _incrementar_nome(caminho_excel)
+    novo_caminho = incrementar_nome(caminho_excel)
     shutil.copy2(caminho_excel, novo_caminho)
 
     app = xw.App(visible=False)
