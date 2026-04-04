@@ -10,6 +10,24 @@ import shutil
 
 
 def preencher_gas_parameters(wb, dados):
+    """
+    Preenche a aba "Gas parameters" com os resultados metrológicos calculados
+    a partir dos certificados de calibração dos instrumentos de pressão e temperatura.
+
+    Valores escritos (todos bloqueados contra edição após escrita):
+      - Condições operacionais de referência: pressão estática e temperatura.
+      - Amplitudes das faixas calibradas: DPT Alta, Média e Baixa.
+      - Incerteza absoluta e erro fiducial absoluto para cada DPT e pressão estática.
+      - Fator K de cobertura para cada instrumento de pressão.
+      - Incerteza, K e erro residual individuais do transmissor de temperatura e da
+        termoresistência (células auxiliares para composição RSS).
+      - Incerteza combinada, erro fiducial combinado e K da temperatura (RSS).
+
+    Args:
+        wb: Workbook xlwings aberto da planilha de CI.
+        dados (dict): Dados consolidados contendo instrumentos calibrados,
+                      faixas, pontos de calibração e condições operacionais.
+    """
     amplitudes = calcular_amplitudes(faixas_calibradas(dados))
     incerteza_abs = incerteza_absoluta(dados, amplitudes)
     erro_fid = erro_fiducial_abs(dados, amplitudes)
@@ -189,6 +207,20 @@ def preencher_gas_parameters(wb, dados):
     icert_comb = None
     
 def preencher_meter_run_parameter(wb, dados):
+    """
+    Preenche a aba "Meter run parameters" com os dados metrológicos da placa de orifício.
+
+    Valores escritos (todos bloqueados contra edição após escrita):
+      - Diâmetro do orifício medido (valor médio do certificado).
+      - Incerteza expandida do diâmetro.
+      - Fator K da placa de orifício.
+      - Coeficiente de expansão térmica do material da placa.
+
+    Args:
+        wb: Workbook xlwings aberto da planilha de CI.
+        dados (dict): Dados consolidados. A chave "placa" deve conter os dados
+                      do certificado de calibração da placa de orifício.
+    """
 
     placa_dados = dados_placa(dados)
     ws = wb.sheets["Meter run parameters"]
@@ -228,6 +260,26 @@ def preencher_meter_run_parameter(wb, dados):
     coef_placa = None
      
 def preencher_cromatografia(wb, dados):
+    """
+    Preenche a aba "Chromatography" com a composição do gás e suas propriedades
+    extraídas do certificado de análise cromatográfica.
+
+    Comportamento:
+      - Limpa o intervalo B2:E200 antes de escrever, evitando dados residuais
+        de revisões anteriores.
+      - H2S e componentes com "HIDROG" no nome são excluídos da escrita por
+        restrição operacional.
+      - Escreve em sequência: componentes (rótulo, nome, mol%, incerteza),
+        propriedades em condição padrão e propriedades em condições de amostragem.
+      - Retorna sem escrever caso não haja dados de cromatografia ou nenhum
+        componente válido, preservando o conteúdo anterior da planilha.
+
+    Args:
+        wb: Workbook xlwings aberto da planilha de CI.
+        dados (dict): Dados consolidados. A chave "cromatografia" deve conter
+                      "componentes", "propriedades_condicao_padrao" e
+                      "propriedades_condicoes_amostragem".
+    """
     print("Entrou na função completa de cromatografia")
 
     cromatografia = dados.get("cromatografia")
@@ -332,54 +384,85 @@ def preencher_cromatografia(wb, dados):
     cromatografia = None
 
 def preencher_equipament_list(wb, dados):
+    """
+    Preenche a aba "Equipment List" com os dados de identificação de cada instrumento
+    (TAG, número de série e certificado de calibração).
+
+    A linha de cada instrumento é localizada dinamicamente pelo texto da coluna A,
+    eliminando dependência de posições fixas e tornando a função resiliente a
+    variações de layout na planilha.
+
+    Instrumentos cobertos: placa de orifício, transmissor de temperatura,
+    termoresistência, pressão estática, DPT Alta, DPT Média, DPT Baixa
+    e cromatografia (somente número de certificado, coluna F).
+
+    Args:
+        wb: Workbook xlwings aberto da planilha de CI.
+        dados (dict): Dados consolidados contendo os sub-dicts de cada instrumento
+                      e o dict "cromatografia" com seu cabeçalho.
+    """
 
     sec_dados = dados_secundários(dados)
     placa_dados = dados_placa(dados)
-    
-
 
     ws = wb.sheets["Equipment List"]
 
-    linhas = {
-        "temperatura": 16,
-        "termoresistencia": 17,
-        "pressao_estatica": 18,
-        "dpt_alta": 19,
+    instrumentos = {
+        "placa":            "Placa de Orifício (Orifice Plate)",
+        "temperatura":      "Transmissor de Temperatura (Temperature Transmitter)",
+        "termoresistencia": "Termorresistência (Thermoresistance)",
+        "pressao_estatica": "Pressão Estática (Static Pressure)",
+        "dpt_alta":         "Pressão Diferencial Alta (High Differential Pressure)",
+        "dp_baixa":         "Pressão Diferencial Baixa (Low Differential Pressure)",
+        "dp_media":         "Pressão Diferencial Média (Avg Differential Pressure)",
+        'cromatografia':    "Cromatografia (Gas Chromatography)"
     }
 
-    for instrumento, linha in linhas.items():
+    for chave, texto in instrumentos.items():
+        cel = encontrar_celula(ws, texto, coluna_busca="A", coluna_saida="A", tipo_match="contains")
+        if cel is None:
+            continue
 
-        info = sec_dados.get(instrumento, {})
+        linha = cel.row
 
-        tag = info.get("tag")
-        ns = info.get("numero_serie")
+        if chave == "cromatografia":
+            cert = dados.get("cromatografia", {}).get("cabecalho", {}).get("certificado")
+            if cert is not None:
+                ws.range(f"F{linha}").value = cert
+            continue
+
+        info = placa_dados if chave == "placa" else sec_dados.get(chave, {})
+
+        tag  = info.get("tag")
+        ns   = info.get("numero_serie")
         cert = info.get("certificado")
 
-        if tag is not None:
-            ws.range(f"D{linha}").value = tag
-        if ns is not None:
-            ws.range(f"E{linha}").value = ns
-        if cert is not None:
-            ws.range(f"F{linha}").value = cert
-
-    print(placa_dados)
-    tag_placa = placa_dados.get("tag")
-    ns_placa = placa_dados.get("numero_serie")
-    cert_placa = placa_dados.get("certificado")
-
-    if tag_placa is not None:
-        ws.range("D15").value = tag_placa
-
-    if ns_placa is not None:
-        ws.range("E15").value = ns_placa
-
-    if cert_placa is not None:
-        ws.range("F15").value = cert_placa
+        if tag  is not None: ws.range(f"D{linha}").value = tag
+        if ns   is not None: ws.range(f"E{linha}").value = ns
+        if cert is not None: ws.range(f"F{linha}").value = cert
 
     sec_dados = None
     placa_dados = None
 
 def preencher_report(wb, dados):
+    """
+    Preenche a aba "Report" com o número de cálculo atualizado e o motivo da revisão
+    gerado automaticamente com base nos tipos de dados importados pelo usuário.
+
+    Lógica do motivo de revisão (baseada nas respostas de importação XML):
+      - Placa + Cromatografia + Secundários → texto composto completo
+      - Qualquer combinação de dois tipos     → texto combinado
+      - Tipo único                            → texto específico
+      - Nenhum dado importado                 → string vazia
+
+    O número de cálculo é incrementado diretamente no texto da célula de título
+    via utilitário alterar_ncalculo(), refletindo a nova revisão gerada.
+
+    Args:
+        wb: Workbook xlwings aberto da planilha de CI.
+        dados (dict): Dados consolidados (não utilizado diretamente; as respostas
+                      de importação são obtidas via obter_respostas()).
+    """
 
     respostas = obter_respostas()
     ws = wb.sheets["Report"]
@@ -433,9 +516,6 @@ def preencher_report(wb, dados):
     motivo_ci.clear_contents()
     motivo_ci.value = texto
     
-
-
-
 def processar_planilha_gas(caminho_excel, dados):
     """
     Gera uma nova revisão da planilha de CI de gás a partir de um template existente,
