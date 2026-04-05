@@ -1,10 +1,9 @@
 
 import os
 import xlwings as xw
-from writers.util_writer_oleo import (incerteza_temp_oleo, incerteza_percentual, erro_fiducial, formatar_percentual, 
-encontrar_celula_resolucao, encontrar_celula_erro_fiducial, encontrar_celula_incerteza_pressao, encontrar_celula_erro_fiducial_pressao,
-encontrar_celula_bsw_maximo, encontrar_celula_incerteza_bsw, encontrar_celula_pressao_op, encontrar_celula_densidade_op, encontrar_celula_temp_op)
-from writers.utils_writer import faixas_calibradas, calcular_amplitudes, dados_secundários
+from writers.util_writer_oleo import incerteza_temp_oleo, incerteza_percentual, erro_fiducial, formatar_percentual
+from writers.utils_writer import faixas_calibradas, calcular_amplitudes, dados_secundários, encontrar_celula, incrementar_nome
+import shutil
 
 
 def preencher_meter_run_param(wb ,dados):
@@ -31,59 +30,58 @@ def preencher_meter_run_param(wb ,dados):
     
     # Escreve incerteza combinada transmissor e termoresistência
     if inc_transm is not None and inc_termo is not None:
-        cel_inc = encontrar_celula_resolucao(ws)
-        cel_inc.formula = f"=SQRT(({inc_transm}^2)+({inc_termo}^2))"
+        cel_inc = encontrar_celula(ws, "Resolução da Termoresistência (Termoresistance resolution)", coluna_saida="M")
+        cel_inc.formula = f"=RAIZ(SOMAQUAD({inc_transm};{inc_termo}))"
 
     # Escreve erro fiducial combinado transmissor e termoresistência
     if erro_transm is not None and erro_termo is not None:
-        cel_fid = encontrar_celula_erro_fiducial(ws)
-        cel_fid.formula = f"=SQRT(({erro_transm}^2)+({erro_termo}^2))"
-    
+        cel_fid = encontrar_celula(ws, "C2.2.2 - Erro Fiducial (Fiducial Error)", coluna_saida="E")
+        cel_fid.formula = f"=RAIZ(SOMAQUAD({erro_transm};{erro_termo}))"
+
     # Escreve incerteza percentual pressão estática
     amplitude = amplitudes.get("pressao_estatica")
     inc_perc = incert_perc_pressao.get("pressao_estatica") if incert_perc_pressao else None
     if amplitude is not None:
-        cel_incp = encontrar_celula_incerteza_pressao(ws)
+        cel_incp = encontrar_celula(ws, "Incerteza da calibração do medidor de pressão (Pressure meter calibration uncertainty)", coluna_saida="E")
         cel_incp.value = f"={amplitude}*{inc_perc}%"
 
     # Escreve erro fiducial pressão estática
     erro_fidu = erro_fid.get("pressao_estatica") if erro_fid else None
-    if erro_fiducial is not None:
-        cel_err_p = encontrar_celula_erro_fiducial_pressao(ws)
+    if erro_fidu is not None:
+        cel_err_p = encontrar_celula(ws, "C3.1.2 - Erro Fiducial (Fiducial Error)", coluna_saida="E")
         cel_err_p.value = f"={amplitude}*{erro_fidu}%"
-    
+
     # Escreve densidade de operação
     densidade_ref = dados_op.get('densidade') if dados_op else None
     if densidade_ref is not None:
-        cel_densidade = encontrar_celula_densidade_op(ws)
+        cel_densidade = encontrar_celula(ws, "Densidade nas condições De Referência (Standard Density), ρ", coluna_saida="F")
         cel_densidade.value = densidade_ref
-        
 
     # Escreve temperatura de operação
     temp_ref = dados_op.get('temperatura') if dados_op else None
     if temp_ref is not None:
-        cel_tempop=encontrar_celula_temp_op(ws)
-        cel_tempop.value = temp_ref   
+        cel_tempop = encontrar_celula(ws, "Temp. da Termoresistência (Termoresistance temp.) - Ta", coluna_saida="F")
+        cel_tempop.value = temp_ref
 
     # Escreve pressão de operação
     pressao_ref = dados_op.get('pressao') if dados_op else None
     if pressao_ref is not None:
-        cel_pop=encontrar_celula_pressao_op(ws)
-        cel_pop.value=pressao_ref
+        cel_pop = encontrar_celula(ws, "Pressão estática (static pressure), P", coluna_saida="F")
+        cel_pop.value = pressao_ref
 
     # Escreve BSW máximo permitido
     bsw_max = dados_op.get('bsw_max') if dados_op else None
     bsw_max = formatar_percentual(bsw_max)
     if bsw_max is not None:
-        cel_bswm=encontrar_celula_bsw_maximo(ws)
+        cel_bswm = encontrar_celula(ws, "BSW Máximo  (Max BSW Allowed)", coluna_saida="F")
         cel_bswm.value = bsw_max
-    
-    
+
+    # Escreve incerteza BSW
     incert_bsw = dados_op.get('incerteza_bsw') if dados_op else None
     incert_bsw = formatar_percentual(incert_bsw)
     if incert_bsw is not None:
-        inc_bsw=encontrar_celula_incerteza_bsw(ws)
-        inc_bsw.value = incert_bsw
+        cel_inc_bsw = encontrar_celula(ws, "C5.1 Incerteza padrão combinada - BSW (BSW Combined Uncertainty)", coluna_saida="E")
+        cel_inc_bsw.value = incert_bsw
 
 
 def preencher_equipament_list(wb, dados):
@@ -126,6 +124,25 @@ def preencher_equipament_list(wb, dados):
 
 
 def processar_planilha_oleo(caminho_excel, dados):
+    """
+    Gera uma nova revisão da planilha de CI de óleo a partir de um template existente,
+    preenchendo as abas com os dados extraídos dos certificados XML.
+
+    O arquivo de origem nunca é alterado. Uma cópia com nome incrementado é criada
+    antes de qualquer escrita (ex: *-04.xlsx → *-05.xlsx), garantindo rastreabilidade
+    de revisões e integridade do template.
+
+    Args:
+        caminho_excel (str): Caminho absoluto da planilha de referência (revisão anterior).
+        dados (dict): Dados consolidados dos instrumentos, incluindo XMLs parseados,
+                      condições operacionais e resultados calculados.
+
+    Raises:
+        Exception: Propaga qualquer exceção do xlwings; a instância do Excel é
+                   encerrada via `finally` independentemente do resultado.
+    """
+    novo_caminho = incrementar_nome(caminho_excel)
+    shutil.copy2(caminho_excel, novo_caminho)
 
     app = xw.App(visible=False)
     app.display_alerts = False
@@ -134,7 +151,7 @@ def processar_planilha_oleo(caminho_excel, dados):
     try:
 
         wb = app.books.open(
-            caminho_excel,
+            novo_caminho,
             update_links=False,
             read_only=False,
             ignore_read_only_recommended=True
@@ -142,7 +159,6 @@ def processar_planilha_oleo(caminho_excel, dados):
 
         preencher_meter_run_param(wb, dados)
         preencher_equipament_list(wb, dados)
-    
 
         app.calculate()
 

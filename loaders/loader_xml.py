@@ -1,6 +1,29 @@
 import xml.etree.ElementTree as ET
 
 
+def identificar_tipo_xml(caminho_xml: str) -> str:
+    """
+    Identifica o tipo de instrumento de um certificado XML Petrobras
+    lendo apenas o tag raiz do documento, sem parsear o conteúdo completo.
+
+    Retorno:
+        "pressao"         → CERTIFICADO_CALIBRACAO_PRESSAO
+        "temperatura"     → CERTIFICADO_CALIBRACAO_TEMPERATURA
+        "termorresistencia" → CERTIFICADO_CALIBRACAO_TEMPERATURA_TE
+        "desconhecido"    → qualquer outro root tag
+    """
+    root = ET.parse(caminho_xml).getroot()
+    tag = root.tag
+
+    if "TEMPERATURA_TE" in tag:
+        return "termorresistencia"
+    elif "TEMPERATURA" in tag:
+        return "temperatura"
+    elif "PRESSAO" in tag:
+        return "pressao"
+    return "desconhecido"
+
+
 def dados_secundarios(caminho_xml: str) -> dict:
     tree = ET.parse(caminho_xml)
     root = tree.getroot()
@@ -187,7 +210,6 @@ def dados_secundarios(caminho_xml: str) -> dict:
                     "erro": get_text(ponto, "ERRO"),
                 })
     return dados
-
 
 def dados_placa(caminho_xml: str) -> dict:
     tree = ET.parse(caminho_xml)
