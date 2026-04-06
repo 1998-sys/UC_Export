@@ -1,16 +1,9 @@
 from tkinter import messagebox
 
 
-def fluxo_gas(perguntar_xml, inserir_dados_operacao):
+def fluxo_gas(selecionar_xmls_gas, inserir_dados_operacao):
 
-    perguntar_xml("Placa de Orifício", "placa", "placa")
-    perguntar_xml("Cromatografia", "cromatografia", "cromatografia")
-    perguntar_xml("Transmissor de Pressão Diferencial Alta", "dpt_alta")
-    perguntar_xml("Transmissor de Pressão Diferencial Média", "dp_media")
-    perguntar_xml("Transmissor de Pressão Diferencial Baixa", "dp_baixa")
-    perguntar_xml("Pressão Estática", "pressao_estatica")
-    perguntar_xml("Transmissor de Temperatura", "temperatura")
-    perguntar_xml("Termorresistência", "termoresistencia")
+    selecionar_xmls_gas()
 
     perguntar_dados_operacao(inserir_dados_operacao)
 

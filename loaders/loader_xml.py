@@ -3,19 +3,24 @@ import xml.etree.ElementTree as ET
 
 def identificar_tipo_xml(caminho_xml: str) -> str:
     """
-    Identifica o tipo de instrumento de um certificado XML Petrobras
-    lendo apenas o tag raiz do documento, sem parsear o conteúdo completo.
+    Identifica o tipo de instrumento de um XML Petrobras pelo root tag.
 
     Retorno:
-        "pressao"         → CERTIFICADO_CALIBRACAO_PRESSAO
-        "temperatura"     → CERTIFICADO_CALIBRACAO_TEMPERATURA
+        "placa"             → CERTIFICADO_INSPECAO_PLACA_ORIFICIO
+        "cromatografia"     → CROMATOGRAFIA
+        "pressao"           → CERTIFICADO_CALIBRACAO_PRESSAO
+        "temperatura"       → CERTIFICADO_CALIBRACAO_TEMPERATURA
         "termorresistencia" → CERTIFICADO_CALIBRACAO_TEMPERATURA_TE
-        "desconhecido"    → qualquer outro root tag
+        "desconhecido"      → qualquer outro root tag
     """
     root = ET.parse(caminho_xml).getroot()
     tag = root.tag
 
-    if "TEMPERATURA_TE" in tag:
+    if "PLACA_ORIFICIO" in tag:
+        return "placa"
+    elif "CROMATOGRAFIA" in tag:
+        return "cromatografia"
+    elif "TEMPERATURA_TE" in tag:
         return "termorresistencia"
     elif "TEMPERATURA" in tag:
         return "temperatura"
@@ -210,6 +215,24 @@ def dados_secundarios(caminho_xml: str) -> dict:
                     "erro": get_text(ponto, "ERRO"),
                 })
     return dados
+
+def extrair_max_pressao(caminho_xml: str) -> float:
+    """
+    Retorna o valor MAX da FAIXA_NOMINAL de um XML de pressão,
+    usado para ranquear e classificar automaticamente os transmissores.
+    """
+    root = ET.parse(caminho_xml).getroot()
+    ns = {"cal": "http://Petrobras/Medicao/Calibracao"}
+    instrumento = root.find("INSTRUMENTO_PRESSAO", ns)
+    faixa = instrumento.find("FAIXA_NOMINAL", ns) if instrumento is not None else None
+    max_el = faixa.find("MAX", ns) if faixa is not None else None
+    if max_el is not None and max_el.text:
+        try:
+            return float(max_el.text.strip().replace(",", "."))
+        except ValueError:
+            return 0.0
+    return 0.0
+
 
 def dados_placa(caminho_xml: str) -> dict:
     tree = ET.parse(caminho_xml)

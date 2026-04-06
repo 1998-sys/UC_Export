@@ -6,14 +6,14 @@ import sys
 import traceback
 
 from services.ci_service import identificar_tipo_ci, executar_fluxo
-from services.validacoes import validar_ordem_dpts
 from writers.utils_writer import registrar_resposta
 from services.fluxos import fluxo_gas, fluxo_oleo
 from loaders.loader_xml import (
     dados_secundarios,
     dados_placa,
     dados_cromatografia,
-    identificar_tipo_xml
+    identificar_tipo_xml,
+    extrair_max_pressao,
 )
 
 
@@ -159,6 +159,91 @@ def selecionar_xmls_oleo():
             dados_coletados[chave] = dados_secundarios(caminho)
             registrar_resposta(chave, True)
 
+        except Exception as e:
+            messagebox.showerror(
+                "Erro ao ler XML",
+                f"{os.path.basename(caminho)}\n{e}"
+            )
+
+
+def selecionar_xmls_gas_calibracao():
+    """
+    Abre seleção múltipla de XMLs para o fluxo de gás e classifica
+    automaticamente cada arquivo pelo root tag:
+        placa           → dados_placa()
+        cromatografia   → dados_cromatografia()
+        termorresistencia / temperatura → dados_secundarios()
+        pressao         → ranqueado por FAIXA_NOMINAL/MAX (decrescente):
+            1 arquivo → pressao_estatica
+            2 arquivos → pressao_estatica, dpt_alta
+            3 arquivos → pressao_estatica, dpt_alta, dp_baixa
+            4 arquivos → pressao_estatica, dpt_alta, dp_baixa, dp_media
+    """
+    caminhos = filedialog.askopenfilenames(
+        title="Selecionar XMLs de Calibração (Gás)",
+        filetypes=[("Arquivos XML", "*.xml")]
+    )
+
+    if not caminhos:
+        return
+
+    pressao_xmls = []  # (caminho, max_range)
+
+    for caminho in caminhos:
+        try:
+            tipo = identificar_tipo_xml(caminho)
+
+            if tipo == "placa":
+                dados_coletados["placa"] = dados_placa(caminho)
+                registrar_resposta("placa", True)
+
+            elif tipo == "cromatografia":
+                dados_coletados["cromatografia"] = dados_cromatografia(caminho)
+                registrar_resposta("cromatografia", True)
+
+            elif tipo == "termorresistencia":
+                dados_coletados["termoresistencia"] = dados_secundarios(caminho)
+                registrar_resposta("termoresistencia", True)
+
+            elif tipo == "temperatura":
+                dados_coletados["temperatura"] = dados_secundarios(caminho)
+                registrar_resposta("temperatura", True)
+
+            elif tipo == "pressao":
+                max_range = extrair_max_pressao(caminho)
+                pressao_xmls.append((caminho, max_range))
+
+            else:
+                messagebox.showwarning(
+                    "Tipo não reconhecido",
+                    f"Instrumento não identificado:\n{os.path.basename(caminho)}"
+                )
+
+        except Exception as e:
+            messagebox.showerror(
+                "Erro ao ler XML",
+                f"{os.path.basename(caminho)}\n{e}"
+            )
+
+    if not pressao_xmls:
+        return
+
+    pressao_xmls.sort(key=lambda x: x[1], reverse=True)
+    chaves_pressao = ["pressao_estatica", "dpt_alta", "dp_baixa", "dp_media"]
+
+    if len(pressao_xmls) > len(chaves_pressao):
+        nomes = ", ".join(os.path.basename(c) for c, _ in pressao_xmls[len(chaves_pressao):])
+        messagebox.showwarning(
+            "Excesso de XMLs de Pressão",
+            f"Mais de 4 XMLs de pressão selecionados. Ignorando:\n{nomes}"
+        )
+        pressao_xmls = pressao_xmls[:len(chaves_pressao)]
+
+    for i, (caminho, _) in enumerate(pressao_xmls):
+        try:
+            chave = chaves_pressao[i]
+            dados_coletados[chave] = dados_secundarios(caminho)
+            registrar_resposta(chave, True)
         except Exception as e:
             messagebox.showerror(
                 "Erro ao ler XML",
@@ -314,7 +399,7 @@ def iniciar_fluxo():
     tipo = dados_coletados.get("tipo_ci")
     
     if tipo == "gas":
-        fluxo_gas(perguntar_xml, inserir_dados_operacao)
+        fluxo_gas(selecionar_xmls_gas_calibracao, inserir_dados_operacao)
 
     elif tipo == "oleo":
         fluxo_oleo(selecionar_xmls_oleo, inserir_dados_op_oleo)
@@ -357,15 +442,6 @@ def finalizar():
         }
 
         if tipo == "gas":
-
-            valido, mensagem = validar_ordem_dpts(dados_para_envio)
-
-            if not valido:
-                messagebox.showwarning(
-                    "Atenção - Ordem dos DPTs",
-                    mensagem
-                )
-                return
             executar_fluxo(ci_path=caminho_ci,dados=dados_para_envio,tipo=tipo)
         
         elif tipo == "oleo":
