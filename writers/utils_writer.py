@@ -490,7 +490,7 @@ def encontrar_celula(
     """
     texto_ref = normalizar(texto_busca)
 
-    last_row = ws.range(coluna_busca + str(ws.cells.last_cell.row)).end("up").row
+    last_row = ws.range(coluna_busca + str(ws.used_range.last_cell.row)).end("up").row
 
     for i in range(1, last_row + 1):
         valor_celula = ws.range(f"{coluna_busca}{i}").value

@@ -31,42 +31,49 @@ def preencher_meter_run_param(wb ,dados):
     # Escreve incerteza combinada transmissor e termoresistência
     if inc_transm is not None and inc_termo is not None:
         cel_inc = encontrar_celula(ws, "Resolução da Termoresistência (Termoresistance resolution)", coluna_saida="M")
-        cel_inc.formula = f"=RAIZ(SOMAQUAD({inc_transm};{inc_termo}))"
+        print(f"celula da incerteza combinada: {cel_inc.address}")
+        cel_inc.formula_local = f"=RAIZ(SOMAQUAD({inc_transm};{inc_termo}))"
 
     # Escreve erro fiducial combinado transmissor e termoresistência
     if erro_transm is not None and erro_termo is not None:
         cel_fid = encontrar_celula(ws, "C2.2.2 - Erro Fiducial (Fiducial Error)", coluna_saida="E")
-        cel_fid.formula = f"=RAIZ(SOMAQUAD({erro_transm};{erro_termo}))"
+        print(f"celula do erro fiducial combinado: {cel_fid.address}")
+        cel_fid.formula_local = f"=RAIZ(SOMAQUAD({erro_transm};{erro_termo}))"
 
     # Escreve incerteza percentual pressão estática
     amplitude = amplitudes.get("pressao_estatica")
     inc_perc = incert_perc_pressao.get("pressao_estatica") if incert_perc_pressao else None
     if amplitude is not None:
         cel_incp = encontrar_celula(ws, "Incerteza da calibração do medidor de pressão (Pressure meter calibration uncertainty)", coluna_saida="E")
+        print(f"celula da incerteza percentual: {cel_incp.address}")
         cel_incp.value = f"={amplitude}*{inc_perc}%"
 
     # Escreve erro fiducial pressão estática
     erro_fidu = erro_fid.get("pressao_estatica") if erro_fid else None
     if erro_fidu is not None:
         cel_err_p = encontrar_celula(ws, "C3.1.2 - Erro Fiducial (Fiducial Error)", coluna_saida="E")
+        print(f"celula do erro fiducial da pressão estática: {cel_err_p.address}")
         cel_err_p.value = f"={amplitude}*{erro_fidu}%"
 
     # Escreve densidade de operação
     densidade_ref = dados_op.get('densidade') if dados_op else None
     if densidade_ref is not None:
         cel_densidade = encontrar_celula(ws, "Densidade nas condições De Referência (Standard Density), ρ", coluna_saida="F")
+        print(f"celula da densidade de operação: {cel_densidade.address}")
         cel_densidade.value = densidade_ref
 
     # Escreve temperatura de operação
     temp_ref = dados_op.get('temperatura') if dados_op else None
     if temp_ref is not None:
         cel_tempop = encontrar_celula(ws, "Temp. da Termoresistência (Termoresistance temp.) - Ta", coluna_saida="F")
+        print(f"celula da temperatura de operação: {cel_tempop.address}")
         cel_tempop.value = temp_ref
 
     # Escreve pressão de operação
     pressao_ref = dados_op.get('pressao') if dados_op else None
     if pressao_ref is not None:
         cel_pop = encontrar_celula(ws, "Pressão estática (static pressure), P", coluna_saida="F")
+        print(f"celula da pressão de operação: {cel_pop.address}")
         cel_pop.value = pressao_ref
 
     # Escreve BSW máximo permitido
@@ -74,6 +81,7 @@ def preencher_meter_run_param(wb ,dados):
     bsw_max = formatar_percentual(bsw_max)
     if bsw_max is not None:
         cel_bswm = encontrar_celula(ws, "BSW Máximo  (Max BSW Allowed)", coluna_saida="F")
+        print(f"celula do BSW máximo permitido: {cel_bswm.address}")
         cel_bswm.value = bsw_max
 
     # Escreve incerteza BSW
@@ -81,6 +89,7 @@ def preencher_meter_run_param(wb ,dados):
     incert_bsw = formatar_percentual(incert_bsw)
     if incert_bsw is not None:
         cel_inc_bsw = encontrar_celula(ws, "C5.1 Incerteza padrão combinada - BSW (BSW Combined Uncertainty)", coluna_saida="E")
+        print(f"celula da incerteza BSW: {cel_inc_bsw.address}")
         cel_inc_bsw.value = incert_bsw
 
 

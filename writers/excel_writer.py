@@ -515,7 +515,9 @@ def preencher_report(wb, dados):
     motivo_ci = encontrar_celula(ws, "Motivo da Revisão (Reason for Revision)", coluna_busca="B",coluna_saida="C", tipo_match="exact")
     motivo_ci.clear_contents()
     motivo_ci.value = texto
-    
+
+
+
 def processar_planilha_gas(caminho_excel, dados):
     """
     Gera uma nova revisão da planilha de CI de gás a partir de um template existente,
@@ -550,11 +552,15 @@ def processar_planilha_gas(caminho_excel, dados):
             ignore_read_only_recommended=True
         )
 
+        for ws in wb.sheets:
+            ws.api.Unprotect()
+
         preencher_gas_parameters(wb, dados)
         preencher_meter_run_parameter(wb, dados)
         preencher_cromatografia(wb, dados)
         preencher_equipament_list(wb, dados)
         preencher_report(wb, dados)
+        app.api.Run("AUTOMATICO")
 
         app.calculate()
 
@@ -565,3 +571,5 @@ def processar_planilha_gas(caminho_excel, dados):
     finally:
 
         app.quit()
+
+

@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox
 from PIL import Image
 import os
 import sys
+import traceback
 
 from services.ci_service import identificar_tipo_ci, executar_fluxo
 from services.validacoes import validar_ordem_dpts
@@ -11,7 +12,8 @@ from services.fluxos import fluxo_gas, fluxo_oleo
 from loaders.loader_xml import (
     dados_secundarios,
     dados_placa,
-    dados_cromatografia
+    dados_cromatografia,
+    identificar_tipo_xml
 )
 
 
@@ -114,6 +116,54 @@ def perguntar_xml(pergunta, chave, tipo_loader="certificado"):
 
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao ler XML:\n{e}")
+
+
+def selecionar_xmls_oleo():
+    """
+    Abre um diálogo de seleção múltipla de XMLs para o fluxo de óleo.
+    Cada arquivo é identificado automaticamente pelo root tag do certificado
+    Petrobras e classificado na chave correta de dados_coletados, sem
+    interação adicional com o usuário por instrumento.
+
+    Mapeamento de tipo → chave:
+        pressao        → pressao_estatica
+        temperatura    → temperatura
+        termorresistencia → termoresistencia
+    """
+    caminhos = filedialog.askopenfilenames(
+        title="Selecionar XMLs de Calibração (Óleo)",
+        filetypes=[("Arquivos XML", "*.xml")]
+    )
+
+    if not caminhos:
+        return
+
+    mapa_tipos = {
+        "pressao":          "pressao_estatica",
+        "temperatura":      "temperatura",
+        "termorresistencia": "termoresistencia",
+    }
+
+    for caminho in caminhos:
+        try:
+            tipo = identificar_tipo_xml(caminho)
+            chave = mapa_tipos.get(tipo)
+
+            if chave is None:
+                messagebox.showwarning(
+                    "Tipo não reconhecido",
+                    f"Instrumento não identificado:\n{os.path.basename(caminho)}"
+                )
+                continue
+
+            dados_coletados[chave] = dados_secundarios(caminho)
+            registrar_resposta(chave, True)
+
+        except Exception as e:
+            messagebox.showerror(
+                "Erro ao ler XML",
+                f"{os.path.basename(caminho)}\n{e}"
+            )
 
 
 def inserir_dados_operacao():
@@ -267,7 +317,7 @@ def iniciar_fluxo():
         fluxo_gas(perguntar_xml, inserir_dados_operacao)
 
     elif tipo == "oleo":
-        fluxo_oleo(perguntar_xml, inserir_dados_op_oleo)
+        fluxo_oleo(selecionar_xmls_oleo, inserir_dados_op_oleo)
 
     else:
         messagebox.showerror("Erro", "Tipo de CI inválido.")
@@ -344,7 +394,7 @@ def finalizar():
     except Exception as e:
         messagebox.showerror(
             "Erro",
-            f"Ocorreu um erro:\n{str(e)}"
+            f"Ocorreu um erro:\n{str(e)}\n\n{traceback.format_exc()}"
         )
 
 
