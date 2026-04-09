@@ -18,6 +18,7 @@ from loaders.loader_xml import (
 
 
 def resource_path(relative_path):
+    """Resolve caminhos de recursos compatível com PyInstaller e modo dev."""
     try:
         base_path = sys._MEIPASS
     except AttributeError:
@@ -40,6 +41,7 @@ dados_coletados = {}
 
 
 def selecionar_ci():
+    """Ponto de entrada principal: abre o CI Excel, identifica o tipo (gás/óleo) e dispara o fluxo correspondente."""
 
     global dados_coletados
     dados_coletados.clear()
@@ -79,56 +81,11 @@ def selecionar_ci():
     iniciar_fluxo()
 
 
-def perguntar_xml(pergunta, chave, tipo_loader="certificado"):
-  
-    resposta = messagebox.askyesno(
-        "Inserir Dados",
-        f"Deseja inserir dados de {pergunta}?"
-    )
-
-    if not resposta:
-        registrar_resposta(chave, False)
-        return
-    
-    caminho_xml = filedialog.askopenfilename(
-        title=f"Selecionar XML - {pergunta}",
-        filetypes=[("Arquivos XML", "*.xml")]
-    )
-
-
-    if not caminho_xml:
-        registrar_resposta(chave, False)
-        return
-
-    try:
-
-        if tipo_loader == "certificado":
-            dados = dados_secundarios(caminho_xml)
-
-        elif tipo_loader == "placa":
-            dados = dados_placa(caminho_xml)
-
-        elif tipo_loader == "cromatografia":
-            dados = dados_cromatografia(caminho_xml)
-
-        dados_coletados[chave] = dados
-        registrar_resposta(chave, True)
-
-    except Exception as e:
-        messagebox.showerror("Erro", f"Erro ao ler XML:\n{e}")
-
-
 def selecionar_xmls_oleo():
     """
-    Abre um diálogo de seleção múltipla de XMLs para o fluxo de óleo.
-    Cada arquivo é identificado automaticamente pelo root tag do certificado
-    Petrobras e classificado na chave correta de dados_coletados, sem
-    interação adicional com o usuário por instrumento.
-
-    Mapeamento de tipo → chave:
-        pressao        → pressao_estatica
-        temperatura    → temperatura
-        termorresistencia → termoresistencia
+    Seleção múltipla de XMLs para o fluxo de óleo.
+    Classifica cada arquivo automaticamente pelo root tag do certificado Petrobras,
+    mapeando: pressao → pressao_estatica, temperatura → temperatura, termorresistencia → termoresistencia.
     """
     caminhos = filedialog.askopenfilenames(
         title="Selecionar XMLs de Calibração (Óleo)",
@@ -168,16 +125,10 @@ def selecionar_xmls_oleo():
 
 def selecionar_xmls_gas_calibracao():
     """
-    Abre seleção múltipla de XMLs para o fluxo de gás e classifica
-    automaticamente cada arquivo pelo root tag:
-        placa           → dados_placa()
-        cromatografia   → dados_cromatografia()
-        termorresistencia / temperatura → dados_secundarios()
-        pressao         → ranqueado por FAIXA_NOMINAL/MAX (decrescente):
-            1 arquivo → pressao_estatica
-            2 arquivos → pressao_estatica, dpt_alta
-            3 arquivos → pressao_estatica, dpt_alta, dp_baixa
-            4 arquivos → pressao_estatica, dpt_alta, dp_baixa, dp_media
+    Seleção múltipla de XMLs para o fluxo de gás.
+    Classifica cada arquivo pelo root tag; XMLs de pressão são ordenados pela faixa máxima
+    (decrescente) e atribuídos às chaves: pressao_estatica, dpt_alta, dp_baixa, dp_media.
+    Máximo de 4 XMLs de pressão — excedentes são ignorados com aviso.
     """
     caminhos = filedialog.askopenfilenames(
         title="Selecionar XMLs de Calibração (Gás)",
@@ -210,6 +161,7 @@ def selecionar_xmls_gas_calibracao():
                 registrar_resposta("temperatura", True)
 
             elif tipo == "pressao":
+                # Acumula para ordenar por faixa antes de atribuir chaves
                 max_range = extrair_max_pressao(caminho)
                 pressao_xmls.append((caminho, max_range))
 
@@ -228,6 +180,7 @@ def selecionar_xmls_gas_calibracao():
     if not pressao_xmls:
         return
 
+    # Ordena do maior para o menor range e atribui às chaves em ordem de prioridade
     pressao_xmls.sort(key=lambda x: x[1], reverse=True)
     chaves_pressao = ["pressao_estatica", "dpt_alta", "dp_baixa", "dp_media"]
 
@@ -252,6 +205,7 @@ def selecionar_xmls_gas_calibracao():
 
 
 def inserir_dados_operacao():
+    """Janela modal para coleta de pressão e temperatura de operação — usada no fluxo de gás."""
 
     janela = ctk.CTkToplevel()
     janela.title("Dados de Operação")
@@ -282,7 +236,7 @@ def inserir_dados_operacao():
     entry_temp.pack(pady=5)
 
     def salvar():
-
+        """Valida os campos e persiste os dados de operação em dados_coletados."""
         pressao = entry_pressao.get()
         temperatura = entry_temp.get()
 
@@ -314,6 +268,7 @@ def inserir_dados_operacao():
 
 
 def inserir_dados_op_oleo():
+    """Janela modal para coleta dos dados de fluxo de óleo: densidade, temperatura, pressão, BSW e incerteza BSW."""
 
     janela = ctk.CTkToplevel()
     janela.title("Dados Operação Óleo")
@@ -357,7 +312,7 @@ def inserir_dados_op_oleo():
     entry_incert_bsw.pack(pady=5)
 
     def salvar():
-
+        """Valida todos os campos e persiste os dados de fluxo de óleo em dados_coletados."""
         densidade = entry_densidade.get()
         temperatura = entry_temp.get()
         pressao = entry_pressao.get()
@@ -395,9 +350,10 @@ def inserir_dados_op_oleo():
 
 
 def iniciar_fluxo():
+    """Despacha para o fluxo correto (gás/óleo) e, após coleta dos dados, chama finalizar(). Aborta se nenhum dado foi importado."""
 
     tipo = dados_coletados.get("tipo_ci")
-    
+
     if tipo == "gas":
         fluxo_gas(selecionar_xmls_gas_calibracao, inserir_dados_operacao)
 
@@ -408,7 +364,6 @@ def iniciar_fluxo():
         messagebox.showerror("Erro", "Tipo de CI inválido.")
         return
 
-    
     dados_importados = {
         k: v for k, v in dados_coletados.items()
         if k not in ("ci", "tipo_ci")
@@ -425,6 +380,7 @@ def iniciar_fluxo():
 
 
 def finalizar():
+    """Envia os dados coletados para executar_fluxo(), que escreve o CI. Exibe confirmação ou erro ao usuário."""
 
     caminho_ci = dados_coletados.get("ci")
     tipo = dados_coletados.get("tipo_ci")
@@ -443,9 +399,9 @@ def finalizar():
 
         if tipo == "gas":
             executar_fluxo(ci_path=caminho_ci,dados=dados_para_envio,tipo=tipo)
-        
+
         elif tipo == "oleo":
-        
+
                 messagebox.showwarning(
                     "Atenção",
                     "fluxo para óleo rodando."
@@ -456,7 +412,7 @@ def finalizar():
                 tipo=tipo
             )
 
-        
+
 
         else:
             messagebox.showerror("Erro", "Tipo de CI inválido.")
@@ -488,6 +444,7 @@ class App(ctk.CTk):
         self._build_ui()
 
     def _definir_logo_janela(self):
+        """Carrega o ícone da janela via PhotoImage; falha silenciosa se o asset não existir."""
 
         try:
 
@@ -506,6 +463,7 @@ class App(ctk.CTk):
             print("Erro ao carregar ícone:", e)
 
     def _build_ui(self):
+        """Constrói o layout principal: header com título, logo central e botão de seleção de CI."""
 
         header = ctk.CTkFrame(self, fg_color=ODS_RED, height=100, corner_radius=0)
         header.pack(fill="x")
@@ -580,6 +538,6 @@ class App(ctk.CTk):
 
 
 def run():
-
+    """Instancia e executa o loop principal da aplicação."""
     app = App()
     app.mainloop()

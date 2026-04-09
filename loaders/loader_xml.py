@@ -397,25 +397,25 @@ def dados_cromatografia(caminho_xml: str) -> dict:
             "incerteza": normalizar_numero(get_text(comp, "INCERTEZA")),
         })
 
-    dados["propriedades_condicao_padrao"] = []
+    dados["propriedades_condicao_padrao"] = {}
 
     for prop in root.findall("PROPRIEDADESCONDICAOPADRAO/PROPRIEDADE"):
-        dados["propriedades_condicao_padrao"].append({
-            "nome": get_text(prop, "NOME"),
+        nome = get_text(prop, "NOME")
+        dados["propriedades_condicao_padrao"][nome] = {
             "valor": normalizar_numero(get_text(prop, "VALOR")),
             "incerteza": normalizar_numero(get_text(prop, "INCERTEZA")),
             "referencia": prop.attrib.get("referencia"),
-        })
+        }
 
-    dados["propriedades_condicoes_amostragem"] = []
+    dados["propriedades_condicoes_amostragem"] = {}
 
     for prop in root.findall("PROPRIEDADESCONDICOESAMOSTRAGEM/PROPRIEDADE"):
-        dados["propriedades_condicoes_amostragem"].append({
-            "nome": get_text(prop, "NOME"),
+        nome = get_text(prop, "NOME")
+        dados["propriedades_condicoes_amostragem"][nome] = {
             "valor": normalizar_numero(get_text(prop, "VALOR")),
             "incerteza": normalizar_numero(get_text(prop, "INCERTEZA")),
             "referencia": prop.attrib.get("referencia"),
-        })
+        }
 
     return dados
 

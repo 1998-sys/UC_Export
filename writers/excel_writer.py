@@ -37,79 +37,121 @@ def preencher_gas_parameters(wb, dados):
     icert_comb = incert_temp_comb(incert_transm, incert_termo)
     temp_ref = dados.get('dados_operacao', {}).get('temperatura')
     pres_ref = dados.get('dados_operacao', {}).get('pressao')
-    
+    cromatografia = dados.get("cromatografia")
+    props_padrao  = (cromatografia or {}).get("propriedades_condicao_padrao", {})
+    props_amostr  = (cromatografia or {}).get("propriedades_condicoes_amostragem", {})
 
-    ws = wb.sheets["Gas parameters"]
+    prop_z   = props_amostr.get("Fator de Compressibilidade", {})
+    prop_mw  = props_padrao.get("Peso Molecular Total (g/mol)", {})
+    prop_rho = props_amostr.get("Densidade (kg/m³)", {})
+
+    ws = wb.sheets["Parameters"]
 
     valor = pres_ref
     if valor is not None:
-        p_ref = encontrar_celula(ws,"Pressão estática (static pressure), P",coluna_saida="F")
+        p_ref = encontrar_celula(ws,"Pressão estática (static pressure), P",coluna_saida="D")
         p_ref.value=valor
         p_ref.api.Locked = True
     
     valor = temp_ref
     if valor is not None:
-        t_ref = encontrar_celula(ws,"Temperatura (Temperature), T",coluna_saida="F")
+        t_ref = encontrar_celula(ws,"Temperatura (Temperature), T",coluna_saida="D")
         t_ref.value=valor
         t_ref.api.Locked = True
 
+    valor = prop_z.get("valor")
+    if valor is not None:
+        z_cel = encontrar_celula(ws, "Fator de compressibilidade, Z", coluna_saida="D", tipo_match="exact")
+        z_cel.value = valor
+        z_cel.api.Locked = True
+    
+    valor = prop_z.get("incerteza")
+    if valor is not None:
+        z_inc_cel = encontrar_celula(ws, "Fator de compressibilidade, Z (Incert)", coluna_busca='F', coluna_saida="H", tipo_match="exact")
+        z_inc_cel.value = valor
+        z_inc_cel.api.Locked = True
+        
+    valor = prop_mw.get("valor")
+    if valor is not None:
+        mw_cel = encontrar_celula(ws, "Massa molar, M", coluna_saida="D", tipo_match="exact")
+        mw_cel.value = valor
+        mw_cel.api.Locked = True
+    
+    valor = prop_mw.get("incerteza")
+    if valor is not None:
+        mw_inc_cel = encontrar_celula(ws, "Massa molar, M (Incert)", coluna_busca='F', coluna_saida="H", tipo_match="exact")
+        mw_inc_cel.value = valor
+        mw_inc_cel.api.Locked = True
+    
+    valor = prop_rho.get("valor")
+    if valor is not None:
+        rho_cel = encontrar_celula(ws, "Densidade absoluta - CL", coluna_saida="D", tipo_match="exact")
+        rho_cel.value = valor
+        rho_cel.api.Locked = True
+    
+    valor = prop_rho.get("incerteza")
+    if valor is not None:
+        rho_inc_cel = encontrar_celula(ws, "Densidade absoluta - CL (Incert)", coluna_busca='F', coluna_saida="H", tipo_match="exact")
+        rho_inc_cel.value = valor
+        rho_inc_cel.api.Locked = True
+
     valor = amplitudes.get("dpt_alta")
     if valor is not None:
-        dpt_alta = encontrar_celula(ws, "Pressão Diferencial Alta (High Differential Pressure)", coluna_saida="F")
+        dpt_alta = encontrar_celula(ws, "Pressão Diferencial Alta (High Differential Pressure)", coluna_saida="D")
         dpt_alta.value = valor
         dpt_alta.api.Locked = True
 
     valor = amplitudes.get("dp_media")
     if valor is not None:
-        dpt_media = encontrar_celula(ws, "Pressão Diferencial Média (Avg Differential Pressure)", coluna_saida="F")
+        dpt_media = encontrar_celula(ws, "Pressão Diferencial Média (Avg Differential Pressure)", coluna_saida="D")
         dpt_media.value = valor
         dpt_media.api.Locked = True
 
     valor = amplitudes.get("dp_baixa")
     if valor is not None:
-        dpt_baixa = encontrar_celula(ws, "Pressão Diferencial Baixa (Low Differential Pressure)", coluna_saida="F")
+        dpt_baixa = encontrar_celula(ws, "Pressão Diferencial Baixa (Low Differential Pressure)", coluna_saida="D")
         dpt_baixa.value = valor
         dpt_baixa.api.Locked = True
 
 
     valor = incerteza_abs.get("dpt_alta")
     if valor is not None:
-        inc_alta = encontrar_celula(ws, "Pressão diferencial de Alta", coluna_saida="E", tipo_match="exact")
+        inc_alta = encontrar_celula(ws, "Pressão diferencial de Alta (Incert)", coluna_saida="D", tipo_match="exact")
         inc_alta.value = valor
         inc_alta.api.Locked = True
         
     
     valor = erro_fid.get("dpt_alta")
     if valor is not None:
-        fid_alta = encontrar_celula(ws, "(High Differential Pressure) Erro Fiducial (Fiducial Error)", coluna_saida="E", tipo_match="exact")
+        fid_alta = encontrar_celula(ws, "(High Differential Pressure) Erro Fiducial (Fiducial Error)", coluna_saida="D", tipo_match="exact")
         fid_alta.value = valor
         fid_alta.api.Locked = True
 
         
     valor = incerteza_abs.get("dp_media")
     if valor is not None:
-        inc_media = encontrar_celula(ws, "Pressão diferencial de Média", coluna_saida="E", tipo_match="exact")
+        inc_media = encontrar_celula(ws, "Pressão diferencial de Média (Incert)", coluna_saida="D", tipo_match="exact")
         inc_media.value = valor
         inc_media.api.Locked = True
     
     
     valor = erro_fid.get("dp_media")
     if valor is not None:
-        fid_medio = encontrar_celula(ws, "(Medium Range Differential Pressure) Fiducial Error", coluna_saida="E", tipo_match="exact")
+        fid_medio = encontrar_celula(ws, "(Medium Range Differential Pressure) Fiducial Error", coluna_saida="D", tipo_match="exact")
         fid_medio.value = valor
         fid_medio.api.Locked = True
 
         
     valor = incerteza_abs.get("dp_baixa")
     if valor is not None:
-        inc_baixa = encontrar_celula(ws, "Pressão diferencial de Baixa", coluna_saida="E", tipo_match="exact")
+        inc_baixa = encontrar_celula(ws, "Pressão diferencial de Baixa  (Incert)", coluna_saida="D", tipo_match="exact")
         inc_baixa.value = valor
         inc_baixa.api.Locked = True
         
         
     valor = erro_fid.get("dp_baixa")
     if valor is not None:
-        celu_fid_baixa = encontrar_celula(ws, "(Low Range Differential Pressure) Pressure) Fiducial Error", coluna_saida="E", tipo_match="exact")
+        celu_fid_baixa = encontrar_celula(ws, "(Low Range Differential Pressure) Pressure) Fiducial Error", coluna_saida="D", tipo_match="exact")
         celu_fid_baixa.value = valor
         celu_fid_baixa.api.Locked = True
         
@@ -117,7 +159,7 @@ def preencher_gas_parameters(wb, dados):
     
     valor = incerteza_abs.get("pressao_estatica")
     if valor is not None:
-        cel_inc_estatica = encontrar_celula(ws, "Pressão estática", coluna_saida="E", tipo_match="exact")
+        cel_inc_estatica = encontrar_celula(ws, "Pressão estática (Incert)", coluna_saida="D", tipo_match="exact")
         cel_inc_estatica.value = valor
         cel_inc_estatica.api.Locked = True
         
@@ -125,34 +167,34 @@ def preencher_gas_parameters(wb, dados):
 
     valor = erro_fid.get("pressao_estatica")
     if valor is not None:
-        celu_fid_estatica = encontrar_celula(ws, "(Static Pressure) Erro Fiducial (Fiducial Error)", coluna_saida="E", tipo_match="exact")
+        celu_fid_estatica = encontrar_celula(ws, "(Static Pressure) Erro Fiducial (Fiducial Error)", coluna_saida="D", tipo_match="exact")
         celu_fid_estatica.value = valor
         celu_fid_estatica.api.Locked = True
         
 
     valor_k = k_val.get("dpt_alta")
     if valor_k is not None:
-        cel_k_alta = encontrar_celula(ws, "K factor (Alta)", coluna_busca="G", coluna_saida="G", tipo_match="exact", offset_linha=2)
+        cel_k_alta = encontrar_celula(ws, "K factor (Alta)", coluna_saida="D", tipo_match="exact")
         cel_k_alta.value=valor_k
         cel_k_alta.api.Locked = True
         
         
     valor_k = k_val.get("dp_media")
     if valor_k is not None:
-        cl_k_media = encontrar_celula(ws, "K factor (Média)", coluna_busca="G", coluna_saida="G", tipo_match="exact", offset_linha=2)
+        cl_k_media = encontrar_celula(ws, "K factor (Média)", coluna_saida="D", tipo_match="exact")
         cl_k_media.value = valor_k
         cl_k_media.api.Locked = True
 
     valor_k = k_val.get("dp_baixa")
     if valor_k is not None:
-        cl_k_baixa = encontrar_celula(ws, "K factor (Baixa)", coluna_busca="G", coluna_saida="G", tipo_match="exact", offset_linha=2)
+        cl_k_baixa = encontrar_celula(ws, "K factor (Baixa)", coluna_saida="D", tipo_match="exact")
         cl_k_baixa.value = valor_k
         cl_k_baixa.api.Locked = True
         
     
     valor_k = k_val.get("pressao_estatica")
     if valor_k is not None:
-        cl_k_estatica = encontrar_celula(ws, "K factor estática", coluna_busca="G", coluna_saida="G", tipo_match="exact", offset_linha=2)
+        cl_k_estatica = encontrar_celula(ws, "K factor estática", coluna_saida="D", tipo_match="exact")
         cl_k_estatica.value = valor_k
         cl_k_estatica.api.Locked = True
 
@@ -161,13 +203,13 @@ def preencher_gas_parameters(wb, dados):
     err_transm = incert_transm.get("erro") if incert_transm else None
     
     if inc_transm is not None:
-        cel_inc_transm = encontrar_celula(ws, "Inc  transm",coluna_busca='X' ,coluna_saida="X", tipo_match="exact", offset_linha=1)
+        cel_inc_transm = encontrar_celula(ws, "Inc transm",coluna_busca='F' ,coluna_saida="H", tipo_match="exact")
         cel_inc_transm.value = inc_transm
         cel_inc_transm.api.Locked = True
-        cel_k_transm = encontrar_celula(ws, "k transm",coluna_busca='Y' ,coluna_saida="Y", tipo_match="exact", offset_linha=1)
+        cel_k_transm = encontrar_celula(ws, "k transm",coluna_busca='F' ,coluna_saida="H", tipo_match="exact")
         cel_k_transm.value = k_trasm
         cel_k_transm.api.Locked = True     
-        cel_err_transm = encontrar_celula(ws, "erro residual transm",coluna_busca='Z' ,coluna_saida="Z", tipo_match="exact", offset_linha=1)
+        cel_err_transm = encontrar_celula(ws, "erro residual transm",coluna_busca='F' ,coluna_saida="H", tipo_match="exact")
         cel_err_transm.value = err_transm       
         cel_err_transm.api.Locked = True
         
@@ -177,20 +219,20 @@ def preencher_gas_parameters(wb, dados):
     err_termo = incert_termo.get("erro") if incert_termo else None
     
     if inc_termo is not None:
-        cel_inc_termo = encontrar_celula(ws, "Inc termo",coluna_busca='X' ,coluna_saida="X", tipo_match="exact", offset_linha=1)
+        cel_inc_termo = encontrar_celula(ws, "Inc termo", coluna_saida="D", tipo_match="exact")
         cel_inc_termo.value = inc_termo
         cel_inc_termo.api.Locked = True
-        cel_k_termo = encontrar_celula(ws, "k termo",coluna_busca='Y' ,coluna_saida="Y", tipo_match="exact", offset_linha=1)
+        cel_k_termo = encontrar_celula(ws, "k termo", coluna_saida="D", tipo_match="exact")
         cel_k_termo.value = k_termo
         cel_k_termo.api.Locked = True
-        cel_err_termo = encontrar_celula(ws, "erro residual termo",coluna_busca='Z' ,coluna_saida="Z", tipo_match="exact", offset_linha=1)
+        cel_err_termo = encontrar_celula(ws, "erro residual termo",coluna_saida="D", tipo_match="exact")
         cel_err_termo.value = err_termo
         cel_err_termo.api.Locked = True
         
     if icert_comb is not None:
-        incert_temp = encontrar_celula(ws, "Temperatura", coluna_saida="E", tipo_match="exact")
-        fid_temp = encontrar_celula(ws, "(Temperature) Erro Fiducial (Fiducial Error)", coluna_saida="E", tipo_match="exact")
-        k_temp = encontrar_celula(ws, "K factor Temp", coluna_busca="G", coluna_saida="G", tipo_match="exact", offset_linha=2)
+        incert_temp = encontrar_celula(ws, "Temperatura (Incert)", coluna_saida="D", tipo_match="exact")
+        fid_temp = encontrar_celula(ws, "(Temperature) Erro Fiducial (Fiducial Error)", coluna_saida="D", tipo_match="exact")
+        k_temp = encontrar_celula(ws, "K factor Temp", coluna_saida="D", tipo_match="exact")
         incert_temp.value = icert_comb.get("incerteza")
         incert_temp.api.Locked = True
         fid_temp.value = icert_comb.get("erro")
@@ -223,7 +265,7 @@ def preencher_meter_run_parameter(wb, dados):
     """
 
     placa_dados = dados_placa(dados)
-    ws = wb.sheets["Meter run parameters"]
+    ws = wb.sheets["Parameters"]
 
     diametro = placa_dados.get("diametro_orificio", {}).get("valor", None)
     incert = placa_dados.get("diametro_orificio", {}).get("incerteza", None)
@@ -231,25 +273,25 @@ def preencher_meter_run_parameter(wb, dados):
     coef_placa = placa_dados.get("coef_dilatacao", None)
 
     if diametro is not None:
-        cel_diamentro_po =encontrar_celula(ws, "Diâmetro do orificio medido (Orifice bore Diameter)", coluna_busca="B", coluna_saida="F", tipo_match="exact")
+        cel_diamentro_po =encontrar_celula(ws, "Diâmetro do orificio medido (Orifice bore Diameter)", coluna_busca="L", coluna_saida="N", tipo_match="exact")
         cel_diamentro_po.value = diametro
         cel_diamentro_po.api.Locked = True
         
     
     if incert is not None:
-        cel_incert_po = encontrar_celula(ws, "(Uncertainty) PO", coluna_busca="E", coluna_saida="E", tipo_match="exact", offset_linha=2)
+        cel_incert_po = encontrar_celula(ws, "(Uncertainty) PO", coluna_busca="L", coluna_saida="N", tipo_match="exact")
         cel_incert_po.value = incert
         cel_incert_po.api.Locked = True
         
 
     if k_placa is not None:
-        k_placa_cel = encontrar_celula(ws, "K factor PO", coluna_busca="I", coluna_saida="I", tipo_match="exact", offset_linha=2)
+        k_placa_cel = encontrar_celula(ws, "K factor PO", coluna_busca="L", coluna_saida="N", tipo_match="exact")
         k_placa_cel.value = k_placa
         k_placa_cel.api.Locked = True
     
 
     if coef_placa is not None:
-        coef_placa_cel = encontrar_celula(ws, "Coeficiente de exp. Térmica (Thermal coefficient PO)", coluna_busca="I", coluna_saida="N", tipo_match="exact")
+        coef_placa_cel = encontrar_celula(ws, "Coeficiente de exp. Térmica (Thermal coefficient PO)", coluna_busca="L", coluna_saida="N")
         coef_placa_cel.value = coef_placa
         coef_placa_cel.api.Locked = True
     
@@ -334,10 +376,10 @@ def preencher_cromatografia(wb, dados):
 
     linha += 1
 
-    propriedades_padrao = cromatografia.get("propriedades_condicao_padrao", [])
+    propriedades_padrao = cromatografia.get("propriedades_condicao_padrao", {})
 
-    for prop in propriedades_padrao:
-        ws.range(f"B{linha}").value = prop.get("nome")
+    for nome, prop in propriedades_padrao.items():
+        ws.range(f"B{linha}").value = nome
         ws.range(f"C{linha}").value = prop.get("referencia")
 
         if prop.get("valor") is not None:
@@ -361,12 +403,10 @@ def preencher_cromatografia(wb, dados):
 
     linha += 1
 
-    propriedades_amostragem = cromatografia.get(
-        "propriedades_condicoes_amostragem", []
-    )
+    propriedades_amostragem = cromatografia.get("propriedades_condicoes_amostragem", {})
 
-    for prop in propriedades_amostragem:
-        ws.range(f"B{linha}").value = prop.get("nome")
+    for nome, prop in propriedades_amostragem.items():
+        ws.range(f"B{linha}").value = nome
         ws.range(f"C{linha}").value = prop.get("referencia")
 
         if prop.get("valor") is not None:
@@ -560,9 +600,10 @@ def processar_planilha_gas(caminho_excel, dados):
         preencher_cromatografia(wb, dados)
         preencher_equipament_list(wb, dados)
         preencher_report(wb, dados)
-        app.api.Run("AUTOMATICO")
+        #app.api.Run("AUTOMATICO")
+        #app.api.Visible = False  # macro pode sobrescrever visible=False; força de volta
 
-        app.calculate()
+        #app.calculate()
 
         wb.save()
 
